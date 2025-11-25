@@ -52,10 +52,11 @@ class StubEmbeddingClient(BaseEmbeddingClient):
         return [float(len(text))]
 
 
-def build_embeddings(api_key: Optional[str]) -> BaseEmbeddingClient:
+def build_embeddings(api_key: Optional[str], mode: str = "stub") -> BaseEmbeddingClient:
+    if mode == "stub":
+        return StubEmbeddingClient()
     if api_key:
         try:
-            # google-generativeai 임베딩 API 사용 (text-embedding-004 등)
             import google.generativeai as genai
 
             genai.configure(api_key=api_key)

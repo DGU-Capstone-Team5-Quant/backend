@@ -21,8 +21,8 @@ class MarketDataLoader:
         self.logger = logging.getLogger(__name__)
         self._news_cache: Dict[tuple[str, int, int], tuple[float, list[dict[str, Any]]]] = {}
         self._price_cache: Dict[tuple[str, str, str, int, Optional[str], Optional[str]], tuple[float, pd.DataFrame]] = {}
-        self._news_cache_ttl = 300.0  # seconds
-        self._price_cache_ttl = 120.0  # seconds
+        self._news_cache_ttl = settings.news_cache_ttl  # seconds
+        self._price_cache_ttl = settings.price_cache_ttl  # seconds
 
     async def fetch_prices(
         self,
@@ -38,6 +38,9 @@ class MarketDataLoader:
         cached_df = self._get_cached_price(ticker, mode, interval, window, start_date, end_date)
         if cached_df is not None:
             return cached_df
+
+        if interval not in self.settings.interval_allowlist:
+            raise ValueError(f"interval '{interval}' is not supported. allowed: {self.settings.interval_allowlist}")
 
         headers: Dict[str, str] = {}
         if self.settings.rapid_api_key:
@@ -60,7 +63,8 @@ class MarketDataLoader:
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(url, headers=headers, params=params)
-                resp.raise_for_status()
+                if resp.status_code >= 400:
+                    raise httpx.HTTPStatusError(f"HTTP {resp.status_code}: {resp.text}", request=resp.request, response=resp)
                 payload = resp.json()
                 try:
                     # Debug logging: truncate for readability
@@ -106,8 +110,8 @@ class MarketDataLoader:
             try:
                 async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
                     resp = await client.get(url, headers=headers)
-                    # Google News RSS는 302로 지역/언어 리디렉션이 걸릴 수 있어 follow_redirects=True로 강제.
-                    resp.raise_for_status()
+                    if resp.status_code >= 400:
+                        raise httpx.HTTPStatusError(f"HTTP {resp.status_code}: {resp.text}", request=resp.request, response=resp)
                     feed = feedparser.parse(resp.text)
                     articles = []
                     for entry in feed.entries[:limit]:

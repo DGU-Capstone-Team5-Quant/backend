@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+import httpx
 from pydantic import BaseModel, Field
 
 from config import Settings, get_settings
@@ -19,6 +20,10 @@ class SimulationRequest(BaseModel):
     end_date: str | None = Field(default=None, description="데이터 종료일(YYYY-MM-DD)")
     news_limit: int = Field(default=5, description="뉴스 가져올 개수")
     news_page: int = Field(default=0, description="뉴스 페이지 (0부터 시작)")
+    bb_rounds: int | None = Field(default=None, description="Bull/Bear 토론 라운드 수 (기본 설정값 사용)")
+    memory_store_manager_only: bool | None = Field(
+        default=None, description="True이면 Manager 리포트만 메모리에 저장(비용 절감)"
+    )
 
 
 class SimulationResponse(BaseModel):
@@ -44,7 +49,13 @@ async def run_simulation(payload: SimulationRequest, service: SimulationService 
             end_date=payload.end_date,
             news_limit=payload.news_limit,
             news_page=payload.news_page,
+            bb_rounds=payload.bb_rounds,
+            memory_store_manager_only=payload.memory_store_manager_only,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
     except Exception as exc:  # pragma: no cover - placeholder for real error handling
         raise HTTPException(status_code=500, detail=str(exc))
 
