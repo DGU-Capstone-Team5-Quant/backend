@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import time
+import logging
 from typing import Any, Dict, Optional, List
 from uuid import uuid4
 
@@ -28,9 +29,10 @@ class SimulationService:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.loader = MarketDataLoader(settings)
-        self.llm = build_llm(settings.gemini_api_key, settings.gemini_model)
+        self.llm = build_llm(settings.gemini_api_key, settings.gemini_model, temperature=settings.llm_temperature, max_tokens=settings.llm_max_tokens)
         self.memory = self._build_memory()
         self._records: Dict[str, SimulationResult] = {}
+        self.logger = logging.getLogger(__name__)
 
     async def run(
         self,
@@ -86,6 +88,17 @@ class SimulationService:
                 duplicate_threshold=self.settings.memory_duplicate_threshold,
                 ttl_days=self.settings.memory_ttl_days,
                 role_weights=self.settings.memory_role_weights,
+                rollup_count=self.settings.memory_rollup_count,
+                rollup_target=self.settings.memory_rollup_target,
+                llm=self.llm,
+                salience_weight=self.settings.memory_salience_weight,
+                score_cutoff=self.settings.memory_score_cutoff,
+                min_length=self.settings.memory_min_length,
+                skip_stub=self.settings.memory_skip_stub,
+                is_stub_embedding=self.settings.embedding_mode == "stub",
+                gc_batch=self.settings.memory_gc_batch,
+                expected_dim=self.settings.redis_vector_dim,
+                logger=logging.getLogger("finmem"),
             )
         except Exception:
             return InMemoryMemory()
@@ -115,6 +128,7 @@ class SimulationService:
             "report": final_state.report,
             "bull": final_state.bull_view,
             "bear": final_state.bear_view,
+            "reflection": getattr(final_state, "reflection", None),
             "snapshot": snapshot if include_news else {k: v for k, v in snapshot.items() if k != "news"},
         }
 
@@ -155,9 +169,10 @@ class SimulationService:
     ) -> TradeState:
         for _ in range(bb_rounds):
             state = await self._bull(state, memory_store_manager_only)
-            state = await self._bear(state, memory_store_manager_only)
+        state = await self._bear(state, memory_store_manager_only)
         state = await self._trader(state, memory_store_manager_only)
         state = await self._manager(state)
+        state = await self._reflection(state)
         return state
 
     def _add_working(self, state: TradeState, content: str, role: str) -> None:
@@ -172,7 +187,7 @@ class SimulationService:
         prompt = prompts.BULL_TEMPLATE.format(
             snapshot=self._fmt_snapshot(state.snapshot), memories=self._fmt_memories(state.working_mem, state.memories)
         )
-        state.bull_view = await self.llm.generate(prompt)
+        state.bull_view = await self._generate_with_retry(prompt)
         self._add_working(state, state.bull_view, "bull")
         if not memory_store_manager_only:
             await self.memory.add_memory(
@@ -184,7 +199,7 @@ class SimulationService:
         prompt = prompts.BEAR_TEMPLATE.format(
             snapshot=self._fmt_snapshot(state.snapshot), memories=self._fmt_memories(state.working_mem, state.memories)
         )
-        state.bear_view = await self.llm.generate(prompt)
+        state.bear_view = await self._generate_with_retry(prompt)
         self._add_working(state, state.bear_view, "bear")
         if not memory_store_manager_only:
             await self.memory.add_memory(
@@ -196,7 +211,7 @@ class SimulationService:
         prompt = prompts.TRADER_TEMPLATE.format(
             bull=state.bull_view, bear=state.bear_view, memories=self._fmt_memories(state.working_mem, state.memories)
         )
-        state.decision = await self.llm.generate(prompt)
+        state.decision = await self._generate_with_retry(prompt)
         self._add_working(state, state.decision, "trader")
         if not memory_store_manager_only:
             await self.memory.add_memory(
@@ -208,10 +223,31 @@ class SimulationService:
         prompt = prompts.MANAGER_TEMPLATE.format(
             bull=state.bull_view, bear=state.bear_view, trader=state.decision, memories=self._fmt_memories(state.working_mem, state.memories)
         )
-        state.report = await self.llm.generate(prompt)
+        state.report = await self._generate_with_retry(prompt)
         self._add_working(state, state.report, "manager")
         await self.memory.add_memory(
             content=state.report, metadata={"role": "manager", "ticker": state.snapshot.get("ticker", ""), "created_at": time.time()}
+        )
+        return state
+
+    async def _reflection(self, state: TradeState) -> TradeState:
+        prompt = prompts.REFLECTION_TEMPLATE.format(
+            bull=state.bull_view,
+            bear=state.bear_view,
+            trader=state.decision,
+            manager=state.report,
+            memories=self._fmt_memories(state.working_mem, state.memories),
+        )
+        state.reflection = await self._generate_with_retry(prompt)
+        self._add_working(state, state.reflection, "reflection")
+        await self.memory.add_memory(
+            content=state.reflection,
+            metadata={
+                "role": "reflection",
+                "ticker": state.snapshot.get("ticker", ""),
+                "created_at": time.time(),
+                "salience": self.settings.memory_reflection_role_weight,
+            },
         )
         return state
 
@@ -227,3 +263,15 @@ class SimulationService:
         ticker = snapshot.get("ticker", "")
         latest = snapshot.get("latest", {})
         return f"티커: {ticker}, 최신: {latest}"
+
+    async def _generate_with_retry(self, prompt: str) -> str:
+        last = ""
+        for _ in range(self.settings.llm_max_retries + 1):
+            try:
+                resp = await self.llm.generate(prompt)
+                last = resp
+                obj = json.loads(resp)
+                return json.dumps(obj, ensure_ascii=False)
+            except Exception:
+                continue
+        return last

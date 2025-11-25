@@ -18,6 +18,7 @@ class BacktestRequest(BaseModel):
     end_date: str | None = Field(default=None, description="YYYY-MM-DD")
     interval: str = Field(default="1h", description="1min/5min/15min/1h/1day etc.")
     step: int = Field(default=1, description="Stride when sliding the window")
+    include_news: bool = Field(default=False, description="Include news in backtest snapshots")
 
 
 class BacktestResponse(BaseModel):
@@ -53,6 +54,7 @@ async def run_backtest(payload: BacktestRequest, service: BacktestService = Depe
             end_date=payload.end_date,
             interval=payload.interval,
             step=payload.step,
+            include_news=payload.include_news,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -64,7 +66,7 @@ async def run_backtest(payload: BacktestRequest, service: BacktestService = Depe
     return BacktestResponse(backtest_id=result.backtest_id, summary=result.summary, trades=result.trades)
 
 
-@router.post("/backtest/point", response_model=PointBacktestResponse)
+@router.post("/point", response_model=PointBacktestResponse)
 async def run_point_backtest(payload: PointBacktestRequest, service: BacktestService = Depends(get_service)) -> PointBacktestResponse:
     try:
         result = await service.run_point(

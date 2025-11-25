@@ -14,11 +14,14 @@ class StubLLMClient(BaseLLMClient):
 
 
 class GeminiLLMClient(BaseLLMClient):
-    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash"):
+    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash", temperature: float = 0.3, max_output_tokens: int = 512):
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
+        self.model = genai.GenerativeModel(
+            model_name,
+            generation_config={"temperature": temperature, "max_output_tokens": max_output_tokens},
+        )
 
     async def generate(self, prompt: str) -> str:
         # google-generativeai는 비동기 API가 없어 sync 호출을 래핑
@@ -26,10 +29,10 @@ class GeminiLLMClient(BaseLLMClient):
         return result.text if hasattr(result, "text") else str(result)
 
 
-def build_llm(api_key: Optional[str], model_name: str = "gemini-2.0-flash") -> BaseLLMClient:
+def build_llm(api_key: Optional[str], model_name: str = "gemini-2.0-flash", temperature: float = 0.3, max_tokens: int = 512) -> BaseLLMClient:
     if api_key:
         try:
-            return GeminiLLMClient(api_key, model_name=model_name)
+            return GeminiLLMClient(api_key, model_name=model_name, temperature=temperature, max_output_tokens=max_tokens)
         except Exception:
             # API 키가 있어도 환경이 불안정할 경우 스텁으로 폴백
             return StubLLMClient()

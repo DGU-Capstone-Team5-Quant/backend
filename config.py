@@ -30,10 +30,18 @@ class Settings(BaseSettings):
     memory_duplicate_threshold: float = Field(default=0.9, alias="MEMORY_DUPLICATE_THRESHOLD")
     memory_ttl_days: float = Field(default=30.0, alias="MEMORY_TTL_DAYS")  # expire after N days (filter at search time)
     memory_role_weights: dict[str, float] = Field(
-        default_factory=lambda: {"manager": 1.5, "trader": 1.2, "bull": 1.0, "bear": 1.0, "mem": 1.0},
+        default_factory=lambda: {"manager": 1.5, "trader": 1.2, "bull": 1.0, "bear": 1.0, "feedback": 1.3, "mem": 1.0},
         alias="MEMORY_ROLE_WEIGHTS",
     )
+    memory_salience_weight: float = Field(default=0.0, alias="MEMORY_SALIENCE_WEIGHT")
+    memory_score_cutoff: float = Field(default=0.0, alias="MEMORY_SCORE_CUTOFF")
+    memory_min_length: int = Field(default=50, alias="MEMORY_MIN_LENGTH")
+    memory_skip_stub: bool = Field(default=True, alias="MEMORY_SKIP_STUB")
+    memory_reflection_role_weight: float = Field(default=1.8, alias="MEMORY_REFLECTION_ROLE_WEIGHT")
     embedding_mode: str = Field(default="stub", alias="EMBEDDING_MODE")  # stub | gemini
+    memory_rollup_count: int = Field(default=50, alias="MEMORY_ROLLUP_COUNT")  # rollup after N manager reports
+    memory_rollup_target: int = Field(default=10, alias="MEMORY_ROLLUP_TARGET")  # keep top N after rollup
+    memory_gc_batch: int = Field(default=50, alias="MEMORY_GC_BATCH")  # delete this many expired manager reports at rollup
     price_cache_ttl: float = Field(default=120.0, alias="PRICE_CACHE_TTL")
     news_cache_ttl: float = Field(default=300.0, alias="NEWS_CACHE_TTL")
     max_rounds: int = Field(default=1, alias="DEBATE_MAX_ROUNDS")
@@ -42,6 +50,13 @@ class Settings(BaseSettings):
         default_factory=lambda: ["1min", "5min", "15min", "30min", "45min", "1h", "2h", "4h", "8h", "1day", "1week", "1month"]
     )
     working_mem_max: int = Field(default=10, alias="WORKING_MEM_MAX")
+    llm_temperature: float = Field(default=0.3, alias="LLM_TEMPERATURE")
+    llm_max_tokens: int = Field(default=512, alias="LLM_MAX_TOKENS")
+    llm_max_retries: int = Field(default=2, alias="LLM_MAX_RETRIES")
+    backtest_fee_bps: float = Field(default=0.0, alias="BACKTEST_FEE_BPS")
+    backtest_slippage_bps: float = Field(default=0.0, alias="BACKTEST_SLIPPAGE_BPS")
+    backtest_stop_loss: float = Field(default=-0.05, alias="BACKTEST_STOP_LOSS")  # -5%
+    backtest_take_profit: float = Field(default=0.1, alias="BACKTEST_TAKE_PROFIT")  # +10%
 
     @computed_field
     @property

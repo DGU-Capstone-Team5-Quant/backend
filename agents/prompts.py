@@ -1,33 +1,55 @@
-BULL_TEMPLATE = """당신은 Bull Analyst입니다. 시장 스냅샷과 기억을 바탕으로 상승 논리를 제시하세요.
-입력: {snapshot}
+BULL_TEMPLATE = """당신은 Bull Analyst입니다. JSON으로만 답하세요.
+입력 스냅샷: {snapshot}
 기억: {memories}
-출력 형식: 
-- 논리 요약
-- 리스크"""
+출력 JSON 스키마:
+{{
+  "summary": "...",       // 상승 논리 핵심
+  "risks": ["..."]        // 리스트
+}}"""
 
-BEAR_TEMPLATE = """당신은 Bear Analyst입니다. 시장 스냅샷과 기억을 바탕으로 하락 논리를 제시하세요.
-입력: {snapshot}
+BEAR_TEMPLATE = """당신은 Bear Analyst입니다. JSON으로만 답하세요.
+입력 스냅샷: {snapshot}
 기억: {memories}
-출력 형식:
-- 논리 요약
-- 리스크"""
+출력 JSON 스키마:
+{{
+  "summary": "...",       // 하락 논리 핵심
+  "risks": ["..."]        // 리스트
+}}"""
 
-TRADER_TEMPLATE = """당신은 Trader입니다. Bull/Bear 논리를 비교해 LONG/SHORT/HOLD를 결정하세요.
+TRADER_TEMPLATE = """당신은 Trader입니다. JSON으로만 답하세요.
 입력:
-- Bull: {bull}
-- Bear: {bear}
+  Bull: {bull}
+  Bear: {bear}
 기억: {memories}
-출력 형식:
-- 액션(LONG/SHORT/HOLD)
-- 근거"""
+출력 JSON 스키마:
+{{
+  "action": "LONG|SHORT|HOLD",
+  "rationale": "...",
+  "confidence": "low|medium|high"
+}}"""
 
-MANAGER_TEMPLATE = """당신은 Manager입니다. 전체 토론의 품질을 평가하고 요약 리포트를 작성하세요.
+MANAGER_TEMPLATE = """당신은 Manager입니다. JSON으로만 답하세요.
 입력:
-- Bull: {bull}
-- Bear: {bear}
-- Trader: {trader}
+  Bull: {bull}
+  Bear: {bear}
+  Trader: {trader}
 기억: {memories}
-출력 형식:
-- 리스크 요약
-- 전략 요약
-- 후속 액션"""
+출력 JSON 스키마:
+{{
+  "risks": ["..."],
+  "strategy": "...",
+  "next_steps": ["..."]
+}}"""
+
+REFLECTION_TEMPLATE = """당신은 Manager의 회고 역할입니다. JSON으로만 답하세요.
+입력:
+  Bull: {bull}
+  Bear: {bear}
+  Trader: {trader}
+  Manager: {manager}
+기억: {memories}
+출력 JSON 스키마:
+{{
+  "reflection": "...",   // 이번 토론/결정에 대한 성찰
+  "actions": ["..."]     // 향후 개선/검증할 포인트
+}}"""

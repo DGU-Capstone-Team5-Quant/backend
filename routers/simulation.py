@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from config import Settings, get_settings
 from services.simulation import SimulationService
 
-router = APIRouter(tags=["simulation"])
+router = APIRouter(tags=["simulation"], prefix="/api")
 
 
 class SimulationRequest(BaseModel):
@@ -36,7 +36,7 @@ def get_service(settings: Settings = Depends(get_settings)) -> SimulationService
     return SimulationService(settings)
 
 
-@router.post("/run-simulation", response_model=SimulationResponse)
+@router.post("/run", response_model=SimulationResponse)
 async def run_simulation(payload: SimulationRequest, service: SimulationService = Depends(get_service)) -> SimulationResponse:
     try:
         result = await service.run(

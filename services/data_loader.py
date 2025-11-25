@@ -79,6 +79,9 @@ class MarketDataLoader:
                         df = df.set_index("date").sort_index()
                     self._set_cached_price(ticker, mode, interval, window, start_date, end_date, df)
                     return df
+        except httpx.HTTPStatusError as exc:
+            self.logger.error("fetch_prices API error: %s", exc)
+            raise
         except Exception as exc:
             # 네트워크 불가/엔드포인트 미설정 시 샘플 시계열 생성
             self.logger.warning("fetch_prices fallback to stub: %s", exc)
