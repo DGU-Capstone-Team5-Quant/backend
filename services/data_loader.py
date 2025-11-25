@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
 import pandas as pd
@@ -15,22 +15,41 @@ class MarketDataLoader:
         self.price_url_daily = str(settings.price_endpoint_daily or settings.price_endpoint)
         self.news_url = str(settings.news_endpoint)
 
-    async def fetch_prices(self, ticker: str, window: int, *, mode: str = "intraday") -> pd.DataFrame:
+    async def fetch_prices(
+        self,
+        ticker: str,
+        window: int,
+        *,
+        mode: str = "intraday",
+        interval: str = "1hour",
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> pd.DataFrame:
         headers = {
             "X-RapidAPI-Key": self.settings.rapid_api_key,
             "X-RapidAPI-Host": self.settings.rapid_api_host,
         }
-        params = {"symbol": ticker, "window": window}
-        url = self.price_url_intraday if mode == "intraday" else self.price_url_daily
+        params: Dict[str, Any] = {"symbol": ticker}
+        if mode == "intraday":
+            params.update({"interval": interval, "window": window})
+        if start_date:
+            params["from"] = start_date
+        if end_date:
+            params["to"] = end_date
+
+        url_template = self.price_url_intraday if mode == "intraday" else self.price_url_daily
+        url = url_template.format(symbol=ticker, interval=interval)
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(url, headers=headers, params=params)
                 resp.raise_for_status()
                 payload = resp.json()
-                df = pd.DataFrame(payload.get("prices", []))
+                records = self._parse_price_payload(payload, mode=mode)
+                df = pd.DataFrame(records)
                 if not df.empty:
-                    df["date"] = pd.to_datetime(df["date"])
-                    df = df.set_index("date").sort_index()
+                    if "date" in df.columns:
+                        df["date"] = pd.to_datetime(df["date"])
+                        df = df.set_index("date").sort_index()
                     return df
         except Exception:
             # 네트워크 불가/엔드포인트 미설정 시 샘플 시계열 생성
@@ -46,12 +65,12 @@ class MarketDataLoader:
         }
         return pd.DataFrame(data)
 
-    async def fetch_news(self, ticker: str, limit: int = 5) -> list[dict[str, Any]]:
+    async def fetch_news(self, ticker: str, limit: int = 5, page: int = 0) -> list[dict[str, Any]]:
         headers = {
             "X-RapidAPI-Key": self.settings.rapid_api_key,
             "X-RapidAPI-Host": self.settings.rapid_api_host,
         }
-        params = {"symbol": ticker, "limit": limit}
+        params = {"tickers": ticker, "limit": limit, "page": page}
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(self.news_url, headers=headers, params=params)
@@ -71,18 +90,54 @@ class MarketDataLoader:
         enriched["rsi_14"] = self._rsi(enriched["close"], period=14)
         return enriched
 
-    async def load_snapshot(self, ticker: str, window: int, *, mode: str = "intraday") -> Dict[str, Any]:
-        prices = await self.fetch_prices(ticker, window, mode=mode)
+    async def load_snapshot(
+        self,
+        ticker: str,
+        window: int,
+        *,
+        mode: str = "intraday",
+        interval: str = "1hour",
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        news_limit: int = 5,
+        news_page: int = 0,
+    ) -> Dict[str, Any]:
+        prices = await self.fetch_prices(
+            ticker,
+            window,
+            mode=mode,
+            interval=interval,
+            start_date=start_date,
+            end_date=end_date,
+        )
         enriched = self.add_indicators(prices)
         latest = enriched.tail(1).to_dict(orient="records")[0]
-        news = await self.fetch_news(ticker)
+        news = await self.fetch_news(ticker, limit=news_limit, page=news_page)
         return {
             "ticker": ticker,
             "window": window,
             "mode": mode,
+            "interval": interval,
+            "from": start_date,
+            "to": end_date,
             "latest": latest,
             "news": news,
         }
+
+    @staticmethod
+    def _parse_price_payload(payload: Dict[str, Any], mode: str) -> list[dict[str, Any]]:
+        """
+        FMP 계열 페이로드를 날짜/가격 컬럼으로 정규화합니다.
+        """
+        if isinstance(payload, list):
+            return payload
+        if mode == "intraday":
+            return payload.get("historical", payload.get("results", [])) or payload.get("prices", [])
+        if mode == "daily":
+            historical = payload.get("historical", [])
+            if historical:
+                return historical
+        return payload.get("prices", [])
 
     @staticmethod
     def _rsi(series: pd.Series, period: int) -> pd.Series:
