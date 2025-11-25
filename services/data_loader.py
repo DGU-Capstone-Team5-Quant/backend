@@ -11,18 +11,20 @@ from config import Settings
 class MarketDataLoader:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.price_url = str(settings.price_endpoint)
+        self.price_url_intraday = str(settings.price_endpoint_intraday or settings.price_endpoint)
+        self.price_url_daily = str(settings.price_endpoint_daily or settings.price_endpoint)
         self.news_url = str(settings.news_endpoint)
 
-    async def fetch_prices(self, ticker: str, window: int) -> pd.DataFrame:
+    async def fetch_prices(self, ticker: str, window: int, *, mode: str = "intraday") -> pd.DataFrame:
         headers = {
             "X-RapidAPI-Key": self.settings.rapid_api_key,
             "X-RapidAPI-Host": self.settings.rapid_api_host,
         }
         params = {"symbol": ticker, "window": window}
+        url = self.price_url_intraday if mode == "intraday" else self.price_url_daily
         try:
             async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(self.price_url, headers=headers, params=params)
+                resp = await client.get(url, headers=headers, params=params)
                 resp.raise_for_status()
                 payload = resp.json()
                 df = pd.DataFrame(payload.get("prices", []))
@@ -69,14 +71,15 @@ class MarketDataLoader:
         enriched["rsi_14"] = self._rsi(enriched["close"], period=14)
         return enriched
 
-    async def load_snapshot(self, ticker: str, window: int) -> Dict[str, Any]:
-        prices = await self.fetch_prices(ticker, window)
+    async def load_snapshot(self, ticker: str, window: int, *, mode: str = "intraday") -> Dict[str, Any]:
+        prices = await self.fetch_prices(ticker, window, mode=mode)
         enriched = self.add_indicators(prices)
         latest = enriched.tail(1).to_dict(orient="records")[0]
         news = await self.fetch_news(ticker)
         return {
             "ticker": ticker,
             "window": window,
+            "mode": mode,
             "latest": latest,
             "news": news,
         }

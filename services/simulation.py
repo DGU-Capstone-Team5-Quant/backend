@@ -28,8 +28,8 @@ class SimulationService:
         self.graph = build_graph(self.llm, self.memory)
         self._records: Dict[str, SimulationResult] = {}
 
-    async def run(self, ticker: str, window: int, include_news: bool = True) -> SimulationResult:
-        snapshot = await self.loader.load_snapshot(ticker, window)
+    async def run(self, ticker: str, window: int, include_news: bool = True, mode: str = "intraday") -> SimulationResult:
+        snapshot = await self.loader.load_snapshot(ticker, window, mode=mode)
         memories = await self.memory.search(f"{ticker} market", k=5)
         initial_state = TradeState(snapshot=snapshot, memories=memories)
         final_state = await self.graph.ainvoke(initial_state)

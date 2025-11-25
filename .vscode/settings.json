@@ -1,5 +1,4 @@
 {
   "python.defaultInterpreterPath": ".venv\\Scripts\\python.exe",
-  "python.terminal.activateEnvironment": true,
-  "github.copilot.chat.commitMessage.prompt": "Please propose a commit message in Korean using the Conventional Commits format (e.g., feat:, fix:, docs:, chore:, test:). Provide a short title and a brief body in Korean."
+  "python.terminal.activateEnvironment": true
 }

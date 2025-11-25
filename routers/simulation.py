@@ -13,6 +13,7 @@ class SimulationRequest(BaseModel):
     ticker: str = Field(..., description="Ticker symbol to simulate")
     window: int = Field(default=200, description="Number of periods for the market snapshot")
     news: bool = Field(default=True, description="Include news in the snapshot")
+    mode: str = Field(default="intraday", description="intraday 또는 daily 등 가격 소스 모드")
 
 
 class SimulationResponse(BaseModel):
@@ -28,7 +29,7 @@ def get_service(settings: Settings = Depends(get_settings)) -> SimulationService
 @router.post("/run-simulation", response_model=SimulationResponse)
 async def run_simulation(payload: SimulationRequest, service: SimulationService = Depends(get_service)) -> SimulationResponse:
     try:
-        result = await service.run(payload.ticker, payload.window, include_news=payload.news)
+        result = await service.run(payload.ticker, payload.window, include_news=payload.news, mode=payload.mode)
     except Exception as exc:  # pragma: no cover - placeholder for real error handling
         raise HTTPException(status_code=500, detail=str(exc))
 
