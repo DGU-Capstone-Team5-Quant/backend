@@ -54,9 +54,9 @@ class MarketDataLoader:
         else:
             params.update({"interval": "1day", "outputsize": window, "format": "JSON"})
         if start_date:
-            params["from"] = start_date
+            params["start_date"] = start_date
         if end_date:
-            params["to"] = end_date
+            params["end_date"] = end_date
 
         url_template = self.price_url_intraday if mode == "intraday" else self.price_url_daily
         url = url_template.format(symbol=ticker, interval=interval)
@@ -77,6 +77,10 @@ class MarketDataLoader:
                     if "date" in df.columns:
                         df["date"] = pd.to_datetime(df["date"])
                         df = df.set_index("date").sort_index()
+                        if end_date:
+                            target_ts = pd.to_datetime(end_date)
+                            df = df[df.index <= target_ts]
+                        df = df.tail(window)
                     self._set_cached_price(ticker, mode, interval, window, start_date, end_date, df)
                     return df
         except httpx.HTTPStatusError as exc:
