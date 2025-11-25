@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     price_endpoint: HttpUrl | str = Field(default="https://example-rapidapi-endpoint/prices", alias="RAPID_API_PRICE_URL")
     price_endpoint_intraday: HttpUrl | str = Field(default="", alias="RAPID_API_PRICE_URL_INTRADAY")
     price_endpoint_daily: HttpUrl | str = Field(default="", alias="RAPID_API_PRICE_URL_DAILY")
-    news_endpoint: HttpUrl | str = Field(default="https://example-rapidapi-endpoint/news", alias="RAPID_API_NEWS_URL")
+    news_endpoint: HttpUrl | str = Field(
+        default="https://news.google.com/rss/search?q={symbol}+stock&hl=en-US&gl=US&ceid=US:en",
+        alias="RAPID_API_NEWS_URL",
+    )
     database_url: str = Field(default="postgresql+asyncpg://user:password@localhost:5432/finmem", alias="DATABASE_URL")
     postgres_url: str = Field(default="", alias="POSTGRES_URL")
     postgresql_url: str = Field(default="", alias="POSTGRESQL_URL")

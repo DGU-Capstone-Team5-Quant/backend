@@ -14,7 +14,7 @@ class SimulationRequest(BaseModel):
     window: int = Field(default=200, description="Number of periods for the market snapshot")
     news: bool = Field(default=True, description="Include news in the snapshot")
     mode: str = Field(default="intraday", description="intraday 또는 daily 등 가격 소스 모드")
-    interval: str = Field(default="1hour", description="intraday 모드일 때의 간격 (ex: 5min, 15min, 1hour)")
+    interval: str = Field(default="1h", description="intraday 모드일 때의 간격 (ex: 5min, 15min, 1h)")
     start_date: str | None = Field(default=None, description="데이터 시작일(YYYY-MM-DD)")
     end_date: str | None = Field(default=None, description="데이터 종료일(YYYY-MM-DD)")
     news_limit: int = Field(default=5, description="뉴스 가져올 개수")

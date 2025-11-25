@@ -5,6 +5,10 @@ Setup (uv)
 2) uv venv .venv
 3) uv sync
 
+Data sources
+- Prices: configure RapidAPI (e.g., Twelve Data time_series). Set `RAPID_API_KEY`, `RAPID_API_HOST`, and `RAPID_API_PRICE_URL_INTRADAY|DAILY`.
+- News: default uses Yahoo Finance RSS (`RAPID_API_NEWS_URL`), no RapidAPI key required. Ensure the URL template includes `{symbol}`.
+
 VS Code auto activation
 - .vscode/settings.json points to .venv\\Scripts\\python.exe and keeps python.terminal.activateEnvironment on.
 - .python-version pins 3.12 so IDEs pick the right interpreter.

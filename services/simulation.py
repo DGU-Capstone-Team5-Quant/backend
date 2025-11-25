@@ -37,7 +37,7 @@ class SimulationService:
         window: int,
         include_news: bool = True,
         mode: str = "intraday",
-        interval: str = "1hour",
+        interval: str = "1h",
         start_date: str | None = None,
         end_date: str | None = None,
         news_limit: int = 5,
@@ -55,7 +55,8 @@ class SimulationService:
         )
         memories = await self.memory.search(f"{ticker} market", k=5)
         initial_state = TradeState(snapshot=snapshot, memories=memories)
-        final_state = await self.graph.ainvoke(initial_state)
+        raw_state = await self.graph.ainvoke(initial_state)
+        final_state = self._ensure_state(raw_state)
 
         summary = {
             "decision": final_state.decision,
@@ -116,3 +117,12 @@ class SimulationService:
         except Exception:
             # DB 장애 시에도 메인 플로우가 깨지지 않도록 무시
             pass
+
+    @staticmethod
+    def _ensure_state(raw: Any) -> TradeState:
+        if isinstance(raw, TradeState):
+            return raw
+        if isinstance(raw, dict):
+            return TradeState(**raw)
+        # 폴백: 비정상 응답일 때 최소 필드만 채워 반환
+        return TradeState(snapshot={}, memories=[])
