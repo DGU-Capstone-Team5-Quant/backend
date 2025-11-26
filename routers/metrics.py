@@ -1,12 +1,11 @@
 from fastapi import APIRouter
-import time
+
+from services.metrics import metrics_tracker
 
 router = APIRouter(tags=["metrics"])
-start_ts = time.time()
 
 
 @router.get("/metrics")
 async def metrics() -> str:
-    # Minimal Prometheus-format metrics
-    uptime = int(time.time() - start_ts)
-    return f"app_uptime_seconds {uptime}\n"
+    # Prometheus-format metrics
+    return metrics_tracker.render_prometheus()

@@ -42,6 +42,11 @@ class FeedbackService:
 
             decision = summary.get("decision", "")
             report = summary.get("report", "")
+            # dict 타입이면 JSON 문자열로 변환
+            if isinstance(decision, dict):
+                decision = json.dumps(decision, ensure_ascii=False)
+            if isinstance(report, dict):
+                report = json.dumps(report, ensure_ascii=False)
             decision_date = datetime.now()
             check_date = decision_date + timedelta(days=self.feedback_days)
 

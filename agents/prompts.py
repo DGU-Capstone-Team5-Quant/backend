@@ -1,22 +1,22 @@
-BULL_TEMPLATE = """당신은 Bull Analyst입니다. JSON으로만 답하세요.
+BULL_TEMPLATE = """당신은 Bull Analyst입니다. JSON으로만 답하세요. 반드시 유효한 JSON만 출력하세요.
 입력 스냅샷: {snapshot}
 기억: {memories}
 출력 JSON 스키마:
 {{
-  "summary": "...",       // 상승 논리 핵심
-  "risks": ["..."]        // 리스트
+  "summary": "...",
+  "risks": ["..."]
 }}"""
 
-BEAR_TEMPLATE = """당신은 Bear Analyst입니다. JSON으로만 답하세요.
+BEAR_TEMPLATE = """당신은 Bear Analyst입니다. JSON으로만 답하세요. 반드시 유효한 JSON만 출력하세요.
 입력 스냅샷: {snapshot}
 기억: {memories}
 출력 JSON 스키마:
 {{
-  "summary": "...",       // 하락 논리 핵심
-  "risks": ["..."]        // 리스트
+  "summary": "...",
+  "risks": ["..."]
 }}"""
 
-TRADER_TEMPLATE = """당신은 Trader입니다. JSON으로만 답하세요.
+TRADER_TEMPLATE = """당신은 Trader입니다. JSON으로만 답하세요. 반드시 유효한 JSON만 출력하세요.
 입력:
   Bull: {bull}
   Bear: {bear}
@@ -28,7 +28,7 @@ TRADER_TEMPLATE = """당신은 Trader입니다. JSON으로만 답하세요.
   "confidence": "low|medium|high"
 }}"""
 
-MANAGER_TEMPLATE = """당신은 Manager입니다. JSON으로만 답하세요.
+MANAGER_TEMPLATE = """당신은 Manager입니다. JSON으로만 답하세요. 반드시 유효한 JSON만 출력하세요.
 입력:
   Bull: {bull}
   Bear: {bear}
@@ -41,7 +41,7 @@ MANAGER_TEMPLATE = """당신은 Manager입니다. JSON으로만 답하세요.
   "next_steps": ["..."]
 }}"""
 
-REFLECTION_TEMPLATE = """당신은 Manager의 회고 역할입니다. JSON으로만 답하세요.
+REFLECTION_TEMPLATE = """당신은 Manager의 보고를 검토하고 성찰합니다. JSON으로만 답하세요. 반드시 유효한 JSON만 출력하세요.
 입력:
   Bull: {bull}
   Bear: {bear}
@@ -50,6 +50,6 @@ REFLECTION_TEMPLATE = """당신은 Manager의 회고 역할입니다. JSON으로
 기억: {memories}
 출력 JSON 스키마:
 {{
-  "reflection": "...",   // 이번 토론/결정에 대한 성찰
-  "actions": ["..."]     // 향후 개선/검증할 포인트
+  "reflection": "...",
+  "actions": ["..."]
 }}"""

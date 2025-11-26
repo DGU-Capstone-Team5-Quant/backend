@@ -4,3 +4,7 @@
 !.vscode/settings.json
 !.vscode/extensions.json
 .env
+
+# 실험 결과
+results/
+*.log

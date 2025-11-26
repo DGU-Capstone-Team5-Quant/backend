@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     environment: str = Field(default="local")
-    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     rapid_api_key: str = Field(default="", alias="RAPID_API_KEY")
     rapid_api_host: str = Field(default="placeholder-rapidapi-host", alias="RAPID_API_HOST")
     price_endpoint: HttpUrl | str = Field(default="https://example-rapidapi-endpoint/prices", alias="RAPID_API_PRICE_URL")
@@ -23,7 +22,8 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379", alias="REDIS_URL")
     redis_index: str = Field(default="finmem_index")
     redis_vector_dim: int = Field(default=768)
-    gemini_model: str = Field(default="gemini-2.0-flash")
+    ollama_model: str = Field(default="llama3.1:8b", alias="OLLAMA_MODEL")
+    ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
     memory_store_manager_only: bool = Field(default=True, alias="MEMORY_STORE_MANAGER_ONLY")
     memory_search_k: int = Field(default=3, alias="MEMORY_SEARCH_K")
     memory_recency_lambda: float = Field(default=0.01, alias="MEMORY_RECENCY_LAMBDA")  # score penalty per day

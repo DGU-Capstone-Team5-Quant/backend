@@ -1,42 +1,72 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 
 class BaseLLMClient:
-    async def generate(self, prompt: str) -> str:  # pragma: no cover - interface
+    async def generate(self, prompt: str, *, seed: Optional[int] = None) -> str:  # pragma: no cover - interface
         raise NotImplementedError
 
 
 class StubLLMClient(BaseLLMClient):
-    async def generate(self, prompt: str) -> str:
-        return f"[stubbed llm output]\n{prompt[:300]}..."
-
-
-class GeminiLLMClient(BaseLLMClient):
-    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash", temperature: float = 0.3, max_output_tokens: int = 512):
-        import google.generativeai as genai
-
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(
-            model_name,
-            generation_config={"temperature": temperature, "max_output_tokens": max_output_tokens},
+    async def generate(self, prompt: str, *, seed: Optional[int] = None) -> str:
+        # Return valid JSON so downstream parsing succeeds deterministically in stub mode.
+        return (
+            '{'
+            f'"stub": true, "seed": {seed if seed is not None else "null"}, '
+            f'"text": {repr(prompt[:160])}'
+            '}'
         )
 
-    async def generate(self, prompt: str) -> str:
-        # google-generativeai는 비동기 API가 없어 sync 호출을 래핑
-        result = self.model.generate_content(prompt)
-        return result.text if hasattr(result, "text") else str(result)
+
+class OllamaLLMClient(BaseLLMClient):
+    def __init__(
+        self,
+        model_name: str = "llama3.1:8b",
+        temperature: float = 0.3,
+        num_predict: int = 512,
+        base_url: str = "http://localhost:11434",
+    ):
+        import ollama
+
+        self.client = ollama.AsyncClient(host=base_url)
+        self.model_name = model_name
+        self.temperature = temperature
+        self.num_predict = num_predict
+
+    async def generate(self, prompt: str, *, seed: Optional[int] = None) -> str:
+        options = {
+            "temperature": self.temperature,
+            "num_predict": self.num_predict,
+        }
+        if seed is not None:
+            options["seed"] = seed
+
+        response = await self.client.generate(
+            model=self.model_name,
+            prompt=prompt,
+            format="json",  # JSON mode로 강제 - 구조화된 출력 보장
+            options=options,
+        )
+        return response.get("response", "")
 
 
-def build_llm(api_key: Optional[str], model_name: str = "gemini-2.0-flash", temperature: float = 0.3, max_tokens: int = 512) -> BaseLLMClient:
-    if api_key:
-        try:
-            return GeminiLLMClient(api_key, model_name=model_name, temperature=temperature, max_output_tokens=max_tokens)
-        except Exception:
-            # API 키가 있어도 환경이 불안정할 경우 스텁으로 폴백
-            return StubLLMClient()
-    return StubLLMClient()
+def build_llm(
+    model_name: str = "llama3.1:8b",
+    temperature: float = 0.3,
+    max_tokens: int = 512,
+    base_url: str = "http://localhost:11434",
+) -> BaseLLMClient:
+    try:
+        return OllamaLLMClient(
+            model_name=model_name,
+            temperature=temperature,
+            num_predict=max_tokens,
+            base_url=base_url,
+        )
+    except Exception:
+        # Ollama 연결 실패 시 스텁으로 백업
+        return StubLLMClient()
 
 
 class BaseEmbeddingClient:
@@ -55,24 +85,6 @@ class StubEmbeddingClient(BaseEmbeddingClient):
         return [float(len(text))]
 
 
-def build_embeddings(api_key: Optional[str], mode: str = "stub") -> BaseEmbeddingClient:
-    if mode == "stub":
-        return StubEmbeddingClient()
-    if api_key:
-        try:
-            import google.generativeai as genai
-
-            genai.configure(api_key=api_key)
-
-            class _GeminiEmbedding(BaseEmbeddingClient):
-                def embed_documents(self, texts: list[str]) -> list[list[float]]:
-                    return [self.embed_query(t) for t in texts]
-
-                def embed_query(self, text: str) -> list[float]:
-                    result = genai.embed_content(model="text-embedding-004", content=text)
-                    return result["embedding"]  # type: ignore[index]
-
-            return _GeminiEmbedding()
-        except Exception:
-            return StubEmbeddingClient()
+def build_embeddings(mode: str = "stub") -> BaseEmbeddingClient:
+    # 현재는 stub 임베딩만 지원
     return StubEmbeddingClient()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Any, Dict, Optional
+from datetime import datetime, date
 
 from bs4 import BeautifulSoup
 import feedparser
@@ -33,6 +34,8 @@ class MarketDataLoader:
         interval: str = "1h",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        page_size: int = 500,
+        max_pages: int = 20,
     ) -> pd.DataFrame:
         interval = self._normalize_interval(interval)
         cached_df = self._get_cached_price(ticker, mode, interval, window, start_date, end_date)
@@ -48,41 +51,61 @@ class MarketDataLoader:
         if self.settings.rapid_api_host:
             headers["X-RapidAPI-Host"] = self.settings.rapid_api_host
 
-        params: Dict[str, Any] = {"symbol": ticker}
-        if mode == "intraday":
-            params.update({"interval": interval, "outputsize": window, "format": "JSON"})
-        else:
-            params.update({"interval": "1day", "outputsize": window, "format": "JSON"})
-        if start_date:
-            params["start_date"] = start_date
-        if end_date:
-            params["end_date"] = end_date
-
         url_template = self.price_url_intraday if mode == "intraday" else self.price_url_daily
         url = url_template.format(symbol=ticker, interval=interval)
         try:
+            records: list[dict[str, Any]] = []
+            page_size = max(page_size, window)
+            page = 1
             async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(url, headers=headers, params=params)
-                if resp.status_code >= 400:
-                    raise httpx.HTTPStatusError(f"HTTP {resp.status_code}: {resp.text}", request=resp.request, response=resp)
-                payload = resp.json()
-                try:
-                    # Debug logging: truncate for readability
-                    self.logger.info("price payload sample: %s", str(payload)[:800])
-                except Exception:
-                    pass
-                records = self._parse_price_payload(payload, mode=mode)
-                df = pd.DataFrame(records)
-                if not df.empty:
-                    if "date" in df.columns:
-                        df["date"] = pd.to_datetime(df["date"])
-                        df = df.set_index("date").sort_index()
-                        if end_date:
-                            target_ts = pd.to_datetime(end_date)
-                            df = df[df.index <= target_ts]
-                        df = df.tail(window)
-                    self._set_cached_price(ticker, mode, interval, window, start_date, end_date, df)
-                    return df
+                while page <= max_pages:
+                    params: Dict[str, Any] = {
+                        "symbol": ticker,
+                        "interval": interval if mode == "intraday" else "1day",
+                        "outputsize": page_size,
+                        "format": "JSON",
+                        "page": page,
+                    }
+                    if start_date:
+                        params["start_date"] = self._to_iso8601(start_date)
+                    if end_date:
+                        params["end_date"] = self._to_iso8601(end_date)
+
+                    resp = await client.get(url, headers=headers, params=params)
+                    if resp.status_code >= 400:
+                        raise httpx.HTTPStatusError(f"HTTP {resp.status_code}: {resp.text}", request=resp.request, response=resp)
+                    payload = resp.json()
+                    try:
+                        self.logger.info("price payload sample (page %s): %s", page, str(payload)[:800])
+                    except Exception:
+                        pass
+                    page_records = self._parse_price_payload(payload, mode=mode)
+                    if not page_records:
+                        break
+                    records.extend(page_records)
+
+                    try:
+                        oldest = page_records[-1].get("datetime") or page_records[-1].get("date")
+                        if start_date and oldest and pd.to_datetime(oldest) <= pd.to_datetime(start_date):
+                            break
+                    except Exception:
+                        pass
+
+                    if len(page_records) < page_size:
+                        break
+                    page += 1
+
+            df = pd.DataFrame(records)
+            if not df.empty:
+                if "date" in df.columns:
+                    df["date"] = pd.to_datetime(df["date"])
+                    df = df.set_index("date").sort_index()
+                    if start_date:
+                        df = df[df.index >= pd.to_datetime(start_date)]
+                    if end_date:
+                        df = df[df.index <= pd.to_datetime(end_date)]
+                self._set_cached_price(ticker, mode, interval, window, start_date, end_date, df)
+                return df
         except httpx.HTTPStatusError as exc:
             self.logger.error("fetch_prices API error: %s", exc)
             raise
@@ -121,7 +144,8 @@ class MarketDataLoader:
                         raise httpx.HTTPStatusError(f"HTTP {resp.status_code}: {resp.text}", request=resp.request, response=resp)
                     feed = feedparser.parse(resp.text)
                     articles = []
-                    for entry in feed.entries[:limit]:
+                    start_idx = page * limit
+                    for entry in feed.entries[start_idx : start_idx + limit]:
                         summary_html = entry.get("summary", "")
                         summary_text = self._strip_html(summary_html)
                         articles.append(
@@ -229,15 +253,16 @@ class MarketDataLoader:
             end_date=end_date,
         )
         enriched = self.add_indicators(prices)
-        latest = enriched.tail(1).to_dict(orient="records")[0]
+        latest_raw = enriched.tail(1).to_dict(orient="records")[0]
+        latest = self._normalize_record(latest_raw)
         news = await self.fetch_news(ticker, limit=news_limit, page=news_page)
         return {
             "ticker": ticker,
             "window": window,
             "mode": mode,
             "interval": interval,
-            "from": start_date,
-            "to": end_date,
+            "from": self._to_iso8601(start_date) if start_date else None,
+            "to": self._to_iso8601(end_date) if end_date else None,
             "latest": latest,
             "news": news,
         }
@@ -306,3 +331,31 @@ class MarketDataLoader:
         avg_loss = loss.ewm(alpha=1 / period, min_periods=period).mean()
         rs = avg_gain / (avg_loss + 1e-9)
         return 100 - (100 / (1 + rs))
+
+    @staticmethod
+    def _to_iso8601(value: Any) -> str:
+        """
+        Normalize date/datetime/str to ISO8601 string for API params and logging.
+        """
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, date):
+            return value.isoformat()
+        return str(value)
+
+    @staticmethod
+    def _normalize_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize pandas/numpy types to JSON-serializable primitives for API responses.
+        """
+        out: Dict[str, Any] = {}
+        for k, v in record.items():
+            if isinstance(v, (datetime, date)):
+                out[k] = v.isoformat()
+            else:
+                try:
+                    # pandas/numpy scalar to python scalar
+                    out[k] = v.item() if hasattr(v, "item") else v
+                except Exception:
+                    out[k] = v
+        return out
