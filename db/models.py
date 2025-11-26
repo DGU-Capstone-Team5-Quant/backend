@@ -53,3 +53,28 @@ class BacktestTrade(Base):
     position: Mapped[float] = mapped_column()
     pnl: Mapped[float] = mapped_column()
     cumulative_pnl: Mapped[float] = mapped_column()
+
+
+class SimulationFeedback(Base):
+    __tablename__ = "simulation_feedbacks"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    simulation_id: Mapped[str] = mapped_column(String(64), ForeignKey("simulations.id"), index=True)
+    ticker: Mapped[str] = mapped_column(String(32), index=True)
+
+    # 의사결정 시점 정보
+    decision_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    entry_price: Mapped[float] = mapped_column()
+    decision: Mapped[str] = mapped_column(Text())
+    report: Mapped[str] = mapped_column(Text())
+
+    # 추적 기간 설정
+    check_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+    # 실제 결과 (나중에 업데이트)
+    actual_price: Mapped[Optional[float]] = mapped_column(nullable=True)
+    actual_return: Mapped[Optional[float]] = mapped_column(nullable=True)
+    is_checked: Mapped[bool] = mapped_column(default=False, index=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, onupdate=func.now())

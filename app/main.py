@@ -5,6 +5,7 @@ from db.session import init_db
 from routers import simulation
 from routers import backtest
 from routers import metrics
+from routers import feedback
 
 
 def create_app() -> FastAPI:
@@ -15,6 +16,7 @@ def create_app() -> FastAPI:
     app.include_router(simulation.router, prefix="")
     app.include_router(backtest.router, prefix="")
     app.include_router(metrics.router, prefix="")
+    app.include_router(feedback.router, prefix="")
 
     @app.on_event("startup")
     async def _startup() -> None:  # pragma: no cover - startup hook

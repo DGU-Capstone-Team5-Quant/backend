@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     backtest_slippage_bps: float = Field(default=0.0, alias="BACKTEST_SLIPPAGE_BPS")
     backtest_stop_loss: float = Field(default=-0.05, alias="BACKTEST_STOP_LOSS")  # -5%
     backtest_take_profit: float = Field(default=0.1, alias="BACKTEST_TAKE_PROFIT")  # +10%
+    feedback_check_days: int = Field(default=7, alias="FEEDBACK_CHECK_DAYS")  # N일 후 결과 확인
 
     @computed_field
     @property

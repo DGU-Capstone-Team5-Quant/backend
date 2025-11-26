@@ -16,6 +16,7 @@ from services.data_loader import MarketDataLoader
 from services.llm import build_embeddings, build_llm
 from db.session import SessionLocal
 from db.models import AgentLog, Simulation
+from services.feedback import FeedbackService
 
 
 @dataclass
@@ -33,6 +34,7 @@ class SimulationService:
         self.memory = self._build_memory()
         self._records: Dict[str, SimulationResult] = {}
         self.logger = logging.getLogger(__name__)
+        self.feedback_service = FeedbackService(settings, self.memory, self.loader)
 
     async def run(
         self,
@@ -138,6 +140,10 @@ class SimulationService:
 
         await self.memory.add_memory(content=summary["report"] or "manager report", metadata={"role": "manager", "ticker": ticker})
         await self._persist(sim_id, ticker, summary, final_state)
+
+        # 피드백 스케줄 등록 (실시간 결과 추적)
+        await self.feedback_service.schedule_feedback(sim_id, ticker, summary)
+
         return result
 
     async def _persist(self, sim_id: str, ticker: str, summary: Dict[str, Any], state: TradeState) -> None:
