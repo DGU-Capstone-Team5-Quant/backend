@@ -53,7 +53,7 @@ async def main():
     use_memory = not args.no_memory
 
     print("=" * 80)
-    print("🚀 FinMem Trading 백테스트")
+    print("FinMem Trading Backtest")
     print("=" * 80)
     print(f"종목: {args.ticker}")
     print(f"기간: {args.start_date} ~ {args.end_date}")
@@ -67,7 +67,7 @@ async def main():
     print(f"LLM 모델: {settings.ollama_model}")
     print("=" * 80)
 
-    print("\n⏳ 백테스트 실행 중...\n")
+    print("\nRunning backtest...\n")
     sim_service = SimulationService(settings)
     service = BacktestService(sim_service, settings)
 
@@ -86,7 +86,7 @@ async def main():
             initial_capital=args.initial_capital,
         )
 
-        print("\n✅ 백테스트 완료!")
+        print("\nBacktest completed!")
         print("=" * 80)
 
         metrics = result.summary
@@ -105,7 +105,7 @@ async def main():
         print(f"  거래 수: {metrics.get('trades_count', 0)}")
 
         output_dir = Path(args.output_dir)
-        output_dir.mkdir(exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         prefix = f"backtest_{args.ticker}_{args.seed}_{timestamp}"
@@ -127,7 +127,7 @@ async def main():
                 ensure_ascii=False,
                 default=str,  # datetime 직렬화
             )
-        print(f"\n✅ 전체 결과 저장: {json_path}")
+        print(f"\nSaved full results: {json_path}")
 
         # 2. CSV 저장(메트릭 요약)
         csv_path = output_dir / f"{prefix}_metrics.csv"
@@ -136,7 +136,7 @@ async def main():
             writer = csv.DictWriter(f, fieldnames=flat_metrics.keys())
             writer.writeheader()
             writer.writerow(flat_metrics)
-        print(f"✅ 메트릭 CSV 저장: {csv_path}")
+        print(f"Saved metrics CSV: {csv_path}")
 
         # 3. 거래 이력 CSV
         if result.trades:
@@ -145,12 +145,12 @@ async def main():
                 writer = csv.DictWriter(f, fieldnames=result.trades[0].keys())
                 writer.writeheader()
                 writer.writerows(result.trades)
-            print(f"✅ 거래 이력 저장: {trades_csv_path}")
+            print(f"Saved trades CSV: {trades_csv_path}")
 
         print("\n" + "=" * 80)
 
     except Exception as e:
-        print(f"\n❌ 오류 발생: {e}")
+        print(f"\nError occurred: {e}")
         import traceback
 
         traceback.print_exc()

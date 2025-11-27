@@ -135,6 +135,12 @@ class BacktestService:
                     "to": end_date,
                     "latest": latest,
                     "news": [],  # 뉴스 포함 시 loader.fetch_news 호출 확장 가능
+                    "portfolio": {
+                        "cash": float(cash),
+                        "position_shares": float(position),
+                        "equity": float(equity),
+                        "initial_capital": float(initial_capital),
+                    },
                 }
                 sim_result = await self.sim_service.run_on_snapshot(
                     snapshot=snapshot,
@@ -174,11 +180,37 @@ class BacktestService:
 
                 # trade decision (only if no stop/take triggered)
                 if not stop_or_take:
-                    if "LONG" in action:
-                        new_pos = float(shares)
-                    elif "SHORT" in action:
-                        new_pos = -float(shares)
+                    if "BUY" in action:
+                        # BUY_25, BUY_50, BUY_100 파싱
+                        pct = 100  # 기본값
+                        if "BUY_25" in action:
+                            pct = 25
+                        elif "BUY_50" in action:
+                            pct = 50
+                        elif "BUY_100" in action:
+                            pct = 100
+
+                        # 잔고의 pct%만큼 사용해서 매수
+                        buy_cash = cash * (pct / 100.0)
+                        buy_shares = buy_cash / price if price > 0 else 0
+                        new_pos = position + buy_shares
+                    elif "SELL" in action:
+                        # SELL_25, SELL_50, SELL_100 파싱
+                        pct = 100  # 기본값
+                        if "SELL_25" in action:
+                            pct = 25
+                        elif "SELL_50" in action:
+                            pct = 50
+                        elif "SELL_100" in action:
+                            pct = 100
+
+                        # 보유 주식의 pct%만큼 매도 (현물이므로 position >= 0)
+                        sell_shares = position * (pct / 100.0)
+                        new_pos = position - sell_shares
+                        new_pos = max(0, new_pos)  # 음수 방지
                     elif "HOLD" in action:
+                        new_pos = position
+                    else:
                         new_pos = position
 
                 # apply fees/slippage on position change

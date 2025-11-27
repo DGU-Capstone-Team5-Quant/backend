@@ -2,7 +2,10 @@ from typing import Optional
 
 import redis.asyncio as redis
 from langchain.embeddings.base import Embeddings
-from langchain_redis import RedisVectorStore
+try:
+    from langchain_redis import RedisVectorStore
+except (ImportError, ModuleNotFoundError):
+    from langchain_community.vectorstores import Redis as RedisVectorStore
 
 from config import Settings
 

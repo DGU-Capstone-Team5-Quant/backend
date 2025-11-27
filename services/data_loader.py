@@ -103,10 +103,6 @@ class MarketDataLoader:
                     if len(page_records) < page_size:
                         break
 
-                    # Check if we have enough data
-                    if len(records) >= window * 3:
-                        break
-
                     page += 1
 
             df = pd.DataFrame(records)

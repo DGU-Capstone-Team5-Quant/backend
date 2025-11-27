@@ -3,7 +3,12 @@
     "allow": [
       "Bash(python -m pytest:*)",
       "Bash(python:*)",
-      "Bash(.venv/Scripts/python.exe:*)"
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(pip install:*)",
+      "Bash(pip uninstall:*)",
+      "Bash($env:PYTHONIOENCODING=\"utf-8\")",
+      "Bash(chcp 65001)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

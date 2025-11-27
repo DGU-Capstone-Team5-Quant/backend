@@ -250,26 +250,22 @@ python scripts/reset_memory.py --all
 # "yes" 입력하여 확인
 
 # 1. 대조군 실행 (메모리 없음)
-for seed in {0..9}; do
-  python scripts/run_backtest.py \
-    --ticker AAPL \
-    --seed $seed \
-    --no-memory \
-    --output-dir results/exp1_no_memory
-done
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --seed 0 \
+  --no-memory \
+  --output-dir results/exp1_no_memory
 
 # 2. 메모리 초기화 (실험군 전 필수!)
 python scripts/reset_memory.py --all
 # "yes" 입력하여 확인
 
 # 3. 실험군 실행 (메모리 사용)
-for seed in {0..9}; do
-  python scripts/run_backtest.py \
-    --ticker AAPL \
-    --seed $seed \
-    --use-memory \
-    --output-dir results/exp1_with_memory
-done
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --seed 0 \
+  --use-memory \
+  --output-dir results/exp1_with_memory
 ```
 
 **중요:** 대조군과 실험군 사이에 메모리 초기화를 하여 실험 독립성을 보장하세요!
@@ -299,13 +295,11 @@ python scripts/reset_memory.py --all
 
 # 1. 1 라운드 (최소 협업)
 $env:DEBATE_MAX_BB_ROUNDS=1
-for ($seed=0; $seed -le 4; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --seed $seed `
-    --use-memory `
-    --output-dir results/exp2_rounds_1
-}
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --seed 0 \
+  --use-memory \
+  --output-dir results/exp2_rounds_1
 
 # 2. 2 라운드 전 초기화 (필수!)
 python scripts/reset_memory.py --all
@@ -313,13 +307,11 @@ python scripts/reset_memory.py --all
 
 # 3. 2 라운드 (중간 협업)
 $env:DEBATE_MAX_BB_ROUNDS=2
-for ($seed=0; $seed -le 4; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --seed $seed `
-    --use-memory `
-    --output-dir results/exp2_rounds_2
-}
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --seed 0 \
+  --use-memory \
+  --output-dir results/exp2_rounds_1
 
 # 4. 3 라운드 전 초기화 (필수!)
 python scripts/reset_memory.py --all
@@ -327,13 +319,11 @@ python scripts/reset_memory.py --all
 
 # 5. 3 라운드 (최대 협업)
 $env:DEBATE_MAX_BB_ROUNDS=3
-for ($seed=0; $seed -le 4; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --seed $seed `
-    --use-memory `
-    --output-dir results/exp2_rounds_3
-}
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --seed 0 \
+  --use-memory \
+  --output-dir results/exp2_rounds_1
 ```
 
 #### 5.2.4 분석 방법

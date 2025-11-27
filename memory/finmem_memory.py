@@ -5,7 +5,10 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from langchain_redis import RedisVectorStore
+try:
+    from langchain_redis import RedisVectorStore
+except (ImportError, ModuleNotFoundError):
+    from langchain_community.vectorstores import Redis as RedisVectorStore
 from services.llm import BaseLLMClient
 
 

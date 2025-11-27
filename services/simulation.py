@@ -273,8 +273,12 @@ class SimulationService:
         return state
 
     async def _trader(self, state: TradeState, memory_store_manager_only: bool, seed: Optional[int]) -> TradeState:
+        portfolio = state.snapshot.get("portfolio", {})
         prompt = prompts.TRADER_TEMPLATE.format(
-            bull=state.bull_view, bear=state.bear_view, memories=self._fmt_memories(state.working_mem, state.memories)
+            bull=state.bull_view,
+            bear=state.bear_view,
+            portfolio=json.dumps(portfolio, ensure_ascii=False),
+            memories=self._fmt_memories(state.working_mem, state.memories),
         )
         state.decision = await self._generate_with_retry(
             prompt,
