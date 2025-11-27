@@ -41,10 +41,7 @@ RAPID_API_PRICE_URL_DAILY=https://twelve-data1.p.rapidapi.com/time_series
 python scripts/run_simulation.py --ticker AAPL --seed 42
 
 # 백테스트
-python scripts/run_backtest.py --ticker AAPL --start-date 2024-01-01 --end-date 2024-12-31
-
-# 배치 실험 (논문용)
-python scripts/run_experiments.py --tickers AAPL TSLA --seeds 42 43 44
+python scripts/run_backtest.py --ticker AAPL --start-date 2024-01-01 --end-date 2024-12-31 --seed 42
 ```
 
 ## 📖 사용법
@@ -79,11 +76,28 @@ python scripts/run_backtest.py \
 ### 배치 실험 (논문 연구용)
 
 ```bash
-# 여러 종목, 여러 시드로 대규모 실험
-python scripts/run_experiments.py \
-  --tickers AAPL TSLA GOOGL MSFT \
-  --seeds 42 43 44 45 46 \
-  --use-memory
+# 여러 시드로 대규모 실험 (for loop 사용)
+# Bash/Linux/Mac:
+for seed in 42 43 44 45 46; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --start-date 2024-01-01 \
+    --end-date 2024-06-30 \
+    --seed $seed \
+    --use-memory \
+    --output-dir results/with_memory
+done
+
+# PowerShell (Windows):
+for ($seed=42; $seed -le 46; $seed++) {
+  python scripts/run_backtest.py `
+    --ticker AAPL `
+    --start-date 2024-01-01 `
+    --end-date 2024-06-30 `
+    --seed $seed `
+    --use-memory `
+    --output-dir results/with_memory
+}
 ```
 
 ## 🧪 논문 실험 예시
@@ -92,18 +106,26 @@ python scripts/run_experiments.py \
 
 ```bash
 # 대조군 (메모리 미사용)
-python scripts/run_experiments.py \
-  --tickers AAPL \
-  --seeds 42 43 44 45 46 \
-  --no-memory \
-  --output-dir results/no_memory
+for seed in 42 43 44 45 46; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --start-date 2024-01-01 \
+    --end-date 2024-06-30 \
+    --seed $seed \
+    --no-memory \
+    --output-dir results/no_memory
+done
 
 # 실험군 (메모리 사용)
-python scripts/run_experiments.py \
-  --tickers AAPL \
-  --seeds 42 43 44 45 46 \
-  --use-memory \
-  --output-dir results/with_memory
+for seed in 42 43 44 45 46; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --start-date 2024-01-01 \
+    --end-date 2024-06-30 \
+    --seed $seed \
+    --use-memory \
+    --output-dir results/with_memory
+done
 ```
 
 ### 2. 재현성 테스트
@@ -155,9 +177,8 @@ python scripts/run_backtest.py --ticker AAPL --seed 42
 ```
 backend/
 ├── scripts/               # CLI 스크립트
-│   ├── run_simulation.py
-│   ├── run_backtest.py
-│   └── run_experiments.py
+│   ├── run_simulation.py  # 단일 시뮬레이션 실행
+│   └── run_backtest.py    # 백테스트 실행
 ├── services/             # 핵심 로직
 │   ├── simulation.py
 │   ├── backtest.py
