@@ -24,7 +24,7 @@ class OllamaLLMClient(BaseLLMClient):
         self,
         model_name: str = "llama3.1:8b",
         temperature: float = 0.3,
-        num_predict: int = 512,
+        num_predict: int = 1024,
         base_url: str = "http://localhost:11434",
     ):
         import ollama

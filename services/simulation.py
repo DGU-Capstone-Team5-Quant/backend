@@ -347,16 +347,19 @@ class SimulationService:
 
     async def _generate_with_retry(self, prompt: str, *, seed: Optional[int], fallback: Dict[str, Any]) -> str:
         last = ""
-        for _ in range(self.settings.llm_max_retries + 1):
+        current_seed = seed
+        for attempt in range(self.settings.llm_max_retries + 1):
             try:
-                self.logger.debug("LLM prompt preview (seed=%s): %s", seed, prompt[:2000])
-                resp = await self.llm.generate(prompt, seed=seed)
+                self.logger.debug("LLM prompt preview (seed=%s, attempt=%d): %s", current_seed, attempt, prompt[:2000])
+                resp = await self.llm.generate(prompt, seed=current_seed)
                 last = resp
-                self.logger.debug("LLM raw response (seed=%s): %s", seed, str(resp)[:2000])
+                self.logger.debug("LLM raw response (seed=%s, attempt=%d): %s", current_seed, attempt, str(resp)[:2000])
                 obj = json.loads(resp)
                 return json.dumps(obj, ensure_ascii=False)
             except Exception as exc:
-                self.logger.warning("LLM generate/parse failed (seed=%s): %s", seed, exc)
+                self.logger.warning("LLM generate/parse failed (seed=%s, attempt=%d): %s", current_seed, attempt, exc)
+                # 재시도 시 seed를 제거하여 다른 결과 유도
+                current_seed = None
                 continue
         # 마지막 실패 시에도 JSON을 반환해 API 계약을 지킨다.
         try:
