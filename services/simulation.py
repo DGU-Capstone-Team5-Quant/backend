@@ -38,14 +38,14 @@ class SimulationService:
             max_tokens=settings.llm_max_tokens,
             base_url=settings.ollama_base_url,
         )
-        self.memory = self._build_memory()
         self._records: Dict[str, SimulationResult] = {}
         self.logger = logging.getLogger(__name__)
+        self.memory = self._build_memory()
         self.feedback_service = FeedbackService(settings, self.memory, self.loader)
         self.logger.info(
-            "SimulationService initialized: llm=%s embedding_mode=%s environment=%s",
+            "SimulationService initialized: llm=%s embedding_model=%s environment=%s",
             type(self.llm).__name__,
-            settings.embedding_mode,
+            settings.ollama_embedding_model,
             settings.environment,
         )
 
@@ -110,7 +110,10 @@ class SimulationService:
 
     def _build_memory(self) -> FinMemMemory | InMemoryMemory:
         try:
-            embeddings = build_embeddings(mode=self.settings.embedding_mode)
+            embeddings = build_embeddings(
+                model_name=self.settings.ollama_embedding_model,
+                base_url=self.settings.ollama_base_url,
+            )
             store = build_vector_store(self.settings, embeddings)
             return FinMemMemory(
                 store,
@@ -125,12 +128,13 @@ class SimulationService:
                 score_cutoff=self.settings.memory_score_cutoff,
                 min_length=self.settings.memory_min_length,
                 skip_stub=self.settings.memory_skip_stub,
-                is_stub_embedding=self.settings.embedding_mode == "stub",
+                is_stub_embedding=False,  # Ollama 사용하므로 항상 False
                 gc_batch=self.settings.memory_gc_batch,
                 expected_dim=self.settings.redis_vector_dim,
                 logger=logging.getLogger("finmem"),
             )
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Failed to build FinMemMemory: {e}. Falling back to InMemoryMemory.")
             return InMemoryMemory()
 
     async def run_on_snapshot(
@@ -178,7 +182,7 @@ class SimulationService:
                 "news_page": news_page,
                 "llm_model": self.settings.ollama_model,
                 "llm_temperature": self.settings.llm_temperature,
-                "embedding_mode": self.settings.embedding_mode,
+                "embedding_model": self.settings.ollama_embedding_model,
                 "working_mem_max": self.settings.working_mem_max,
                 "environment": self.settings.environment,
             },

@@ -161,7 +161,7 @@ async def check_memory_mode():
     print("\n📋 현재 설정:")
     print(f"  - REDIS_URL: {settings.redis_url}")
     print(f"  - DATABASE_URL: {settings.db_url}")
-    print(f"  - EMBEDDING_MODE: {settings.embedding_mode}")
+    print(f"  - EMBEDDING_MODEL: {settings.ollama_embedding_model}")
 
     if not redis_available and not postgres_available:
         print("\n💡 InMemory 모드로 작동 중입니다.")

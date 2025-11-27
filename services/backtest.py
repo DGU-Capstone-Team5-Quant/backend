@@ -359,7 +359,7 @@ class BacktestService:
                 "use_memory": use_memory,
                 "shares": shares,
                 "llm_model": self.settings.ollama_model,
-                "embedding_mode": self.settings.embedding_mode,
+                "embedding_model": self.settings.ollama_embedding_model,
                 "llm_temperature": self.settings.llm_temperature,
                 "environment": self.settings.environment,
             },

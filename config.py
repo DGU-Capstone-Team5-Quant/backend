@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     redis_vector_dim: int = Field(default=768)
     ollama_model: str = Field(default="llama3.1:70b", alias="OLLAMA_MODEL")
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
+    ollama_embedding_model: str = Field(default="nomic-embed-text", alias="OLLAMA_EMBEDDING_MODEL")
     memory_store_manager_only: bool = Field(default=True, alias="MEMORY_STORE_MANAGER_ONLY")
     memory_search_k: int = Field(default=3, alias="MEMORY_SEARCH_K")
     memory_recency_lambda: float = Field(default=0.01, alias="MEMORY_RECENCY_LAMBDA")  # score penalty per day
@@ -36,9 +37,8 @@ class Settings(BaseSettings):
     memory_salience_weight: float = Field(default=0.0, alias="MEMORY_SALIENCE_WEIGHT")
     memory_score_cutoff: float = Field(default=0.0, alias="MEMORY_SCORE_CUTOFF")
     memory_min_length: int = Field(default=50, alias="MEMORY_MIN_LENGTH")
-    memory_skip_stub: bool = Field(default=True, alias="MEMORY_SKIP_STUB")
+    memory_skip_stub: bool = Field(default=False, alias="MEMORY_SKIP_STUB")
     memory_reflection_role_weight: float = Field(default=1.8, alias="MEMORY_REFLECTION_ROLE_WEIGHT")
-    embedding_mode: str = Field(default="stub", alias="EMBEDDING_MODE")  # stub | gemini
     memory_rollup_count: int = Field(default=50, alias="MEMORY_ROLLUP_COUNT")  # rollup after N manager reports
     memory_rollup_target: int = Field(default=10, alias="MEMORY_ROLLUP_TARGET")  # keep top N after rollup
     memory_gc_batch: int = Field(default=50, alias="MEMORY_GC_BATCH")  # delete this many expired manager reports at rollup

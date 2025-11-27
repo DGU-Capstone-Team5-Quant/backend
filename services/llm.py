@@ -85,6 +85,55 @@ class StubEmbeddingClient(BaseEmbeddingClient):
         return [float(len(text))]
 
 
-def build_embeddings(mode: str = "stub") -> BaseEmbeddingClient:
-    # 현재는 stub 임베딩만 지원
-    return StubEmbeddingClient()
+class OllamaEmbeddingClient(BaseEmbeddingClient):
+    """Ollama를 사용한 임베딩 클라이언트"""
+
+    def __init__(
+        self,
+        model_name: str = "nomic-embed-text",
+        base_url: str = "http://localhost:11434",
+    ):
+        import ollama
+
+        self.client = ollama.Client(host=base_url)
+        self.model_name = model_name
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """여러 텍스트를 임베딩"""
+        if not texts:
+            return []
+
+        embeddings = []
+        for text in texts:
+            response = self.client.embeddings(
+                model=self.model_name,
+                prompt=text
+            )
+            embeddings.append(response.get("embedding", []))
+
+        return embeddings
+
+    def embed_query(self, text: str) -> list[float]:
+        """단일 쿼리를 임베딩"""
+        response = self.client.embeddings(
+            model=self.model_name,
+            prompt=text
+        )
+        return response.get("embedding", [])
+
+
+def build_embeddings(
+    model_name: str = "nomic-embed-text",
+    base_url: str = "http://localhost:11434",
+) -> BaseEmbeddingClient:
+    """Ollama 임베딩 클라이언트 생성 (stub은 폴백용)"""
+    try:
+        return OllamaEmbeddingClient(
+            model_name=model_name,
+            base_url=base_url,
+        )
+    except Exception as e:
+        # Ollama 연결 실패 시 스텁으로 백업
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to initialize Ollama embeddings: {e}. Falling back to stub.")
+        return StubEmbeddingClient()

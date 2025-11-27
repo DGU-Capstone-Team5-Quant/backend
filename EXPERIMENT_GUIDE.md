@@ -244,31 +244,129 @@ ls
 | **실험군** | 메모리 사용 | `--use-memory` |
 
 #### 5.1.3 실험 절차 (AAPL 예시)
+
+**⚠️ 중요: Train/Test 기간 분리**
+- **Train (워밍업)**: 2025-01-01 ~ 2025-08-31 (과거 데이터로 메모리 축적)
+- **Test (평가)**: 2025-09-01 ~ 2025-11-20 (미래 데이터로 평가)
+- **목적**: Data leakage 방지 및 과적합 방지
+
 ```bash
-# 0. 메모리 초기화 (필수!)
+# === 대조군 (no-memory) ===
 python scripts/reset_memory.py --all
 # "yes" 입력하여 확인
 
-# 1. 대조군 실행 (메모리 없음)
 python scripts/run_backtest.py \
   --ticker AAPL \
-  --seed 0 \
+  --start-date 2025-09-01 \
+  --end-date 2025-11-20 \
+  --seed 42 \
   --no-memory \
-  --output-dir results/exp1_no_memory
+  --output-dir results/exp1_control
 
-# 2. 메모리 초기화 (실험군 전 필수!)
+# === 실험군 (with-memory) ===
 python scripts/reset_memory.py --all
 # "yes" 입력하여 확인
 
-# 3. 실험군 실행 (메모리 사용)
+# Step 1: 과거 데이터로 메모리 워밍업 (Train period)
 python scripts/run_backtest.py \
   --ticker AAPL \
-  --seed 0 \
+  --start-date 2025-01-01 \
+  --end-date 2025-08-31 \
+  --seed 1 \
   --use-memory \
-  --output-dir results/exp1_with_memory
+  --output-dir results/exp1_warmup
+
+# Step 2: 메모리 축적 확인
+python scripts/check_memory.py --ticker AAPL
+
+# Step 3: 미래 데이터로 평가 (Test period - unseen data!)
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --start-date 2025-09-01 \
+  --end-date 2025-11-20 \
+  --seed 42 \
+  --use-memory \
+  --output-dir results/exp1_treatment
 ```
 
-**중요:** 대조군과 실험군 사이에 메모리 초기화를 하여 실험 독립성을 보장하세요!
+**핵심 원칙:**
+1. **기간 분리**: 워밍업과 평가 기간을 완전히 분리하여 data leakage 방지
+2. **메모리 축적**: 실험군은 과거 데이터로 먼저 메모리를 쌓은 후 평가
+3. **대조군 기준**: 대조군은 Test period만 실행 (메모리 없음)
+4. **공정한 비교**: 둘 다 같은 seed(42)로 Test period 평가
+
+**잘못된 예시 (Data Leakage!):**
+```bash
+# ❌ 잘못됨: 같은 기간을 두 번 사용
+python scripts/run_backtest.py --start-date 2025-09-01 --end-date 2025-11-20 --use-memory  # 워밍업
+python scripts/run_backtest.py --start-date 2025-09-01 --end-date 2025-11-20 --use-memory  # 평가
+# → 메모리가 미래를 미리 아는 상태 = 과적합!
+```
+
+#### 5.1.4 고급: Walk-Forward 테스트 (메모리 학습 효과 검증)
+
+시간이 지날수록 메모리가 누적되어 성과가 개선되는지 확인:
+
+```bash
+python scripts/reset_memory.py --all
+
+# Q1: 워밍업 (결과 저장하지 않음)
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --start-date 2025-01-01 \
+  --end-date 2025-03-31 \
+  --use-memory \
+  --output-dir results/walk_forward/q1_warmup
+
+# Q2: 첫 평가 (Q1 메모리 활용)
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --start-date 2025-04-01 \
+  --end-date 2025-06-30 \
+  --seed 42 \
+  --use-memory \
+  --output-dir results/walk_forward/q2_test
+
+# Q3: 두 번째 평가 (Q1+Q2 메모리 누적)
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --start-date 2025-07-01 \
+  --end-date 2025-09-30 \
+  --seed 42 \
+  --use-memory \
+  --output-dir results/walk_forward/q3_test
+
+# Q4: 최종 평가 (Q1+Q2+Q3 메모리 누적)
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --start-date 2025-10-01 \
+  --end-date 2025-11-20 \
+  --seed 42 \
+  --use-memory \
+  --output-dir results/walk_forward/q4_test
+```
+
+**기대 결과**: Q2 < Q3 < Q4 성과 개선 (메모리 학습 효과)
+
+**분석 방법**:
+```python
+# 각 분기 수익률 추출
+q2_return = results_q2["total_return"]
+q3_return = results_q3["total_return"]
+q4_return = results_q4["total_return"]
+
+# 시간에 따른 성과 추이 그래프
+plt.plot([2, 3, 4], [q2_return, q3_return, q4_return], marker='o')
+plt.title("Memory Learning Effect Over Time")
+plt.xlabel("Quarter")
+plt.ylabel("Total Return")
+
+# 선형 회귀로 학습 효과 검증
+from scipy.stats import linregress
+slope, intercept, r_value, p_value, std_err = linregress([2,3,4], [q2_return, q3_return, q4_return])
+print(f"Learning slope: {slope:.4f}, p-value: {p_value:.4f}")
+# slope > 0 and p < 0.05 → 메모리 학습 효과 유의미!
+```
 
 ---
 
