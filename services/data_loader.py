@@ -57,6 +57,7 @@ class MarketDataLoader:
             records: list[dict[str, Any]] = []
             page_size = max(page_size, window)
             page = 1
+            last_page_first_date = None
             async with httpx.AsyncClient(timeout=10) as client:
                 while page <= max_pages:
                     params: Dict[str, Any] = {
@@ -82,6 +83,14 @@ class MarketDataLoader:
                     page_records = self._parse_price_payload(payload, mode=mode)
                     if not page_records:
                         break
+
+                    # Detect duplicate pages (pagination bug in API)
+                    current_page_first_date = page_records[0].get("date") if page_records else None
+                    if page > 1 and current_page_first_date == last_page_first_date:
+                        self.logger.warning("Duplicate data detected on page %s, stopping pagination", page)
+                        break
+                    last_page_first_date = current_page_first_date
+
                     records.extend(page_records)
 
                     try:
@@ -93,6 +102,11 @@ class MarketDataLoader:
 
                     if len(page_records) < page_size:
                         break
+
+                    # Check if we have enough data
+                    if len(records) >= window * 3:
+                        break
+
                     page += 1
 
             df = pd.DataFrame(records)

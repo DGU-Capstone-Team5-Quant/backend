@@ -32,7 +32,7 @@ async def reset_redis(ticker: str = None):
     """Redis 메모리 초기화"""
     try:
         import redis
-        from redis.commands.search.indexDefinition import IndexDefinition, IndexType
+        from redis.commands.search.index_definition import IndexDefinition, IndexType
 
         print("\n📦 Redis 연결 중...")
         r = redis.from_url(settings.redis_url, decode_responses=True)
