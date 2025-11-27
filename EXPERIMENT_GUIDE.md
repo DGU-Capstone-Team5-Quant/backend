@@ -253,8 +253,6 @@ python scripts/reset_memory.py --all
 for seed in {0..9}; do
   python scripts/run_backtest.py \
     --ticker AAPL \
-    --start-date 2024-01-01 \
-    --end-date 2024-06-30 \
     --seed $seed \
     --no-memory \
     --output-dir results/exp1_no_memory
@@ -268,8 +266,6 @@ python scripts/reset_memory.py --all
 for seed in {0..9}; do
   python scripts/run_backtest.py \
     --ticker AAPL \
-    --start-date 2024-01-01 \
-    --end-date 2024-06-30 \
     --seed $seed \
     --use-memory \
     --output-dir results/exp1_with_memory
@@ -379,8 +375,6 @@ python scripts/analyze_results.py --exp exp2_collaboration --plot
 python scripts/reset_memory.py --all  # "yes" 입력
 python scripts/run_backtest.py \
   --ticker AAPL \
-  --start-date 2024-01-01 \
-  --end-date 2024-06-30 \
   --seed 0 \
   --use-memory \
   --step 1 \
@@ -390,8 +384,6 @@ python scripts/run_backtest.py \
 python scripts/reset_memory.py --all  # "yes" 입력
 python scripts/run_backtest.py \
   --ticker AAPL \
-  --start-date 2024-01-01 \
-  --end-date 2024-06-30 \
   --seed 1 \
   --use-memory \
   --step 1 \
@@ -401,8 +393,6 @@ python scripts/run_backtest.py \
 python scripts/reset_memory.py --all  # "yes" 입력
 python scripts/run_backtest.py \
   --ticker AAPL \
-  --start-date 2024-01-01 \
-  --end-date 2024-06-30 \
   --seed 2 \
   --use-memory \
   --step 1 \
@@ -412,8 +402,6 @@ python scripts/run_backtest.py \
 python scripts/reset_memory.py --all  # "yes" 입력
 python scripts/run_backtest.py \
   --ticker AAPL \
-  --start-date 2024-01-01 \
-  --end-date 2024-06-30 \
   --seed 3 \
   --use-memory \
   --step 1 \
@@ -423,8 +411,6 @@ python scripts/run_backtest.py \
 python scripts/reset_memory.py --all  # "yes" 입력
 python scripts/run_backtest.py \
   --ticker AAPL \
-  --start-date 2024-01-01 \
-  --end-date 2024-06-30 \
   --seed 4 \
   --use-memory \
   --step 1 \
@@ -436,8 +422,6 @@ python scripts/run_backtest.py \
 for seed in {0..4}; do
   python scripts/run_backtest.py \
     --ticker AAPL \
-    --start-date 2024-01-01 \
-    --end-date 2024-06-30 \
     --seed $seed \
     --no-memory \
     --step 1 \
@@ -536,8 +520,6 @@ python scripts/reset_memory.py --ticker AAPL
 ```bash
 python scripts/run_backtest.py \
   --ticker AAPL \
-  --start-date 2024-01-01 \
-  --end-date 2024-06-30 \
   --seed 42 \
   --use-memory \
   --window 30 \

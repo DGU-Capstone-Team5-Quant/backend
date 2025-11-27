@@ -28,8 +28,8 @@ async def main():
     parser.add_argument("--ticker", type=str, required=True, help="종목 심볼 (예: AAPL, TSLA)")
 
     # 백테스트 설정
-    parser.add_argument("--start-date", type=str, default="2024-01-01", help="시작 날짜 (YYYY-MM-DD)")
-    parser.add_argument("--end-date", type=str, default="2024-12-31", help="종료 날짜 (YYYY-MM-DD)")
+    parser.add_argument("--start-date", type=str, default="2025-09-01", help="시작 날짜 (YYYY-MM-DD)")
+    parser.add_argument("--end-date", type=str, default="2025-11-20", help="종료 날짜 (YYYY-MM-DD)")
     parser.add_argument("--window", type=int, default=30, help="슬라이딩 윈도우 길이 (기본: 30)")
     parser.add_argument("--step", type=int, default=1, help="스텝 간격 (기본: 1)")
     parser.add_argument("--interval", type=str, default="1h", help="시간 간격 (예: 1h, 1day)")
