@@ -32,9 +32,10 @@ python scripts/reset_memory.py --check
 python scripts/run_backtest.py --ticker AAPL --seed 42
 ```
 
-**메모리 시스템 확인 결과:**
-- ✅ **InMemory 모드**: 초기화 불필요 (자동 초기화됨)
-- ⚠️ **Redis 모드**: 각 실험 전 `python scripts/reset_memory.py --all` 실행 필수!
+**⚠️ 필수 요구사항:**
+- **Ollama**: LLM 생성 (연결 실패 시 시스템 중단)
+- **Redis**: 메모리 저장소 (연결 실패 시 시스템 중단)
+- 각 실험 전 메모리 초기화 필수: `python scripts/reset_memory.py --all`
 
 ---
 
@@ -271,30 +272,9 @@ Rounds    Mean Sharpe    Mean Return
 ```
 
 **해결:**
-- **InMemory 모드** (기본): 각 실행마다 자동 초기화 → 문제 없음 ✅
-- **Redis 모드**: 수동 초기화 필요!
+- **Redis 필수**: 각 실험 전 수동 초기화 필요!
 
-### 메모리 모드 확인
-```powershell
-python scripts/reset_memory.py --check
-```
-
-**InMemory 모드 (권장):**
-```
-❌ Redis: 사용 불가 (InMemory 모드로 작동)
-💡 각 백테스트마다 메모리가 자동 초기화되므로 별도의 초기화가 필요 없습니다.
-```
-→ **초기화 불필요!** 그냥 실험 진행하세요.
-
-**Redis 모드:**
-```
-✅ Redis: 사용 가능 (영구 메모리 모드)
-⚠️ 영구 저장소 사용 중입니다.
-   각 실험 전에 메모리 초기화를 권장합니다.
-```
-→ **각 실험 전 초기화 필수!**
-
-### 초기화 방법 (Redis 사용 시)
+### 메모리 초기화 방법
 ```powershell
 # 전체 초기화 (권장)
 python scripts/reset_memory.py --all
@@ -330,12 +310,16 @@ Get-ChildItem results/exp1_no_memory/*.json | Measure-Object
 for ($seed=5; $seed -le 9; $seed++) { ... }
 ```
 
-### Redis 초기화 실패
+### Redis 연결 실패
 ```powershell
-# Redis 서버 확인
-# Windows에서 Redis 사용하려면 별도 설치 필요
-# → InMemory 모드 사용 권장 (초기화 불필요)
+# Redis 서버 실행 필요 (필수!)
+# Docker 사용:
+docker run -d -p 6379:6379 redis:latest
+
+# 또는 Windows용 Redis 설치:
+# https://github.com/microsoftarchive/redis/releases
 ```
+**⚠️ Redis 없이는 시스템 실행 불가**
 
 ---
 

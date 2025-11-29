@@ -561,39 +561,30 @@ python scripts/analyze_learning_curve.py \
 ## 6. 실험 실행
 
 ### 6.1 실행 전 체크리스트
-- [ ] Ollama 서버 실행 중인지 확인 (`ollama list`)
+- [ ] **Ollama 서버 실행 필수** (`ollama list`로 확인)
+- [ ] **Redis 서버 실행 필수** (메모리 저장소)
 - [ ] 가상환경 활성화 (`source .venv/bin/activate` 또는 `.venv\Scripts\activate`)
 - [ ] `results/` 디렉터리 존재 확인
 - [ ] 충분한 디스크 공간 (각 실험당 약 1GB)
-- [ ] **메모리 시스템 확인 및 초기화** ⭐ 중요!
+- [ ] **메모리 초기화** ⭐ 중요!
 
-#### 메모리 시스템 확인
+#### ⚠️ 필수 요구사항
+**이 시스템은 Ollama와 Redis가 필수입니다:**
+- **Ollama**: LLM 생성 (연결 실패 시 시스템 중단)
+- **Redis**: 메모리 저장소 (연결 실패 시 시스템 중단)
+
 ```bash
-# 현재 메모리 모드 확인
-python scripts/reset_memory.py --check
+# Ollama 실행 확인
+ollama list
+
+# Redis 실행 확인 (Docker 사용 시)
+docker ps | grep redis
 ```
-
-**출력 예시:**
-```
-🔍 메모리 시스템 확인 중...
-❌ Redis: 사용 불가 (InMemory 모드로 작동)
-❌ PostgreSQL: 사용 불가
-
-💡 InMemory 모드로 작동 중입니다.
-   각 백테스트마다 메모리가 자동 초기화되므로 별도의 초기화가 필요 없습니다.
-```
-
-**→ InMemory 모드:** 초기화 불필요 ✅
-
-**→ Redis/PostgreSQL 사용 시:** 각 실험 전 초기화 필수!
 
 #### 메모리 초기화 방법
-**InMemory 모드인 경우:**
-- 초기화 불필요 (자동으로 각 실행마다 메모리 리셋됨)
-
-**Redis/PostgreSQL 모드인 경우 (필수!):**
+**각 실험 조건 전에 반드시 실행:**
 ```bash
-# 각 실험 조건 전에 반드시 실행
+# 모든 메모리 초기화
 python scripts/reset_memory.py --all
 # "yes" 입력하여 확인
 

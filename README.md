@@ -197,21 +197,21 @@ ollama list              # 설치 확인
 ollama run llama3.1:8b  # 모델 테스트
 ```
 
-### Redis/PostgreSQL 없음
-- 프로젝트는 DB 없이도 작동 (InMemory 모드)
-- 메모리 영속성은 없지만 실험 가능
-- **논문 실험 시**: InMemory 모드 권장 (각 실행마다 자동 초기화)
-
-### 메모리 초기화 (Redis 사용 시)
+### Redis 필수
+- **이 시스템은 Redis가 필수입니다** (메모리 저장소)
+- Redis 없이는 실행 불가 (연결 실패 시 시스템 중단)
+- Docker로 간단히 설치 가능:
 ```bash
-# 메모리 모드 확인
-python scripts/reset_memory.py --check
-
-# 실험 전 초기화 (Redis 사용 시만)
-python scripts/reset_memory.py --all
+docker run -d -p 6379:6379 redis:latest
 ```
-- **InMemory 모드**: 초기화 불필요 (자동)
-- **Redis 모드**: 각 실험 전 수동 초기화 필요
+
+### 메모리 초기화
+```bash
+# 실험 전 초기화 (필수!)
+python scripts/reset_memory.py --all
+# "yes" 입력하여 확인
+```
+- 각 실험 조건 전에 반드시 초기화 필요
 
 ## VS Code 설정
 - `.vscode/settings.json`이 `.venv` 자동 활성화 설정

@@ -1,22 +1,14 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class BaseLLMClient:
     async def generate(self, prompt: str, *, seed: Optional[int] = None) -> str:  # pragma: no cover - interface
         raise NotImplementedError
-
-
-class StubLLMClient(BaseLLMClient):
-    async def generate(self, prompt: str, *, seed: Optional[int] = None) -> str:
-        # Return valid JSON so downstream parsing succeeds deterministically in stub mode.
-        return (
-            '{'
-            f'"stub": true, "seed": {seed if seed is not None else "null"}, '
-            f'"text": {repr(prompt[:160])}'
-            '}'
-        )
 
 
 class OllamaLLMClient(BaseLLMClient):
@@ -64,9 +56,10 @@ def build_llm(
             num_predict=max_tokens,
             base_url=base_url,
         )
-    except Exception:
-        # Ollama 연결 실패 시 스텁으로 백업
-        return StubLLMClient()
+    except Exception as e:
+        logger.error(f"Failed to initialize Ollama LLM client: {e}")
+        logger.error(f"Ollama connection failed. Check if Ollama is running at {base_url}")
+        raise
 
 
 class BaseEmbeddingClient:
@@ -75,14 +68,6 @@ class BaseEmbeddingClient:
 
     def embed_query(self, text: str) -> list[float]:  # pragma: no cover - interface
         raise NotImplementedError
-
-
-class StubEmbeddingClient(BaseEmbeddingClient):
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [[float(len(t))] for t in texts]
-
-    def embed_query(self, text: str) -> list[float]:
-        return [float(len(text))]
 
 
 class OllamaEmbeddingClient(BaseEmbeddingClient):
@@ -126,14 +111,13 @@ def build_embeddings(
     model_name: str = "nomic-embed-text",
     base_url: str = "http://localhost:11434",
 ) -> BaseEmbeddingClient:
-    """Ollama 임베딩 클라이언트 생성 (stub은 폴백용)"""
+    """Ollama 임베딩 클라이언트 생성"""
     try:
         return OllamaEmbeddingClient(
             model_name=model_name,
             base_url=base_url,
         )
     except Exception as e:
-        # Ollama 연결 실패 시 스텁으로 백업
-        import logging
-        logging.getLogger(__name__).warning(f"Failed to initialize Ollama embeddings: {e}. Falling back to stub.")
-        return StubEmbeddingClient()
+        logger.error(f"Failed to initialize Ollama embedding client: {e}")
+        logger.error(f"Ollama connection failed. Check if Ollama is running at {base_url}")
+        raise

@@ -15,10 +15,6 @@ async def test_ollama():
 
     print(f"LLM Client Type: {type(llm).__name__}")
 
-    if type(llm).__name__ == "StubLLMClient":
-        print("WARNING: Using StubLLMClient - Ollama connection failed!")
-        return False
-
     # Test generation
     test_prompt = """You are a trader. Respond in JSON only.
     Input: Buy signal detected

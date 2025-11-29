@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from langgraph.graph import END, StateGraph
 
 from agents import prompts
-from memory.finmem_memory import FinMemMemory, InMemoryMemory
+from memory.finmem_memory import FinMemMemory
 from services.llm import BaseLLMClient
 
 
@@ -38,7 +38,7 @@ def _fmt_snapshot(snapshot: Dict[str, Any]) -> str:
 
 def build_graph(
     llm: BaseLLMClient,
-    memory: FinMemMemory | InMemoryMemory,
+    memory: FinMemMemory,
     *,
     max_bb_rounds: int,
     memory_store_manager_only: bool,

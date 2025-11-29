@@ -8,7 +8,8 @@
       "Bash(pip uninstall:*)",
       "Bash($env:PYTHONIOENCODING=\"utf-8\")",
       "Bash(chcp 65001)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

@@ -11,7 +11,7 @@ from uuid import uuid4
 from config import Settings
 from agents.graph import TradeState
 from agents import prompts
-from memory.finmem_memory import FinMemMemory, InMemoryMemory
+from memory.finmem_memory import FinMemMemory
 from memory.redis_store import build_vector_store
 from services.data_loader import MarketDataLoader
 from services.llm import build_embeddings, build_llm
@@ -108,7 +108,7 @@ class SimulationService:
             return None
         return None
 
-    def _build_memory(self) -> FinMemMemory | InMemoryMemory:
+    def _build_memory(self) -> FinMemMemory:
         try:
             embeddings = build_embeddings(
                 model_name=self.settings.ollama_embedding_model,
@@ -134,8 +134,9 @@ class SimulationService:
                 logger=logging.getLogger("finmem"),
             )
         except Exception as e:
-            self.logger.error(f"Failed to build FinMemMemory: {e}. Falling back to InMemoryMemory.")
-            return InMemoryMemory()
+            self.logger.error(f"Failed to build FinMemMemory: {e}")
+            self.logger.error("Memory initialization failed. Check Ollama and Redis connections.")
+            raise
 
     async def run_on_snapshot(
         self,
@@ -170,6 +171,10 @@ class SimulationService:
             "bear": self._safe_json(final_state.bear_view, {"summary": "", "risks": []}),
             "reflection": self._safe_json(getattr(final_state, "reflection", None), {"reflection": "", "actions": []}),
             "snapshot": snapshot if include_news else {k: v for k, v in snapshot.items() if k != "news"},
+            "memories": {
+                "long_term": ltm_memories,  # 검색된 장기 메모리 (과거 거래 기록)
+                "working": final_state.working_mem,  # 현재 세션 작업 메모리
+            },
             "meta": {
                 "seed": seed,
                 "bb_rounds": bb_rounds,
@@ -185,6 +190,9 @@ class SimulationService:
                 "embedding_model": self.settings.ollama_embedding_model,
                 "working_mem_max": self.settings.working_mem_max,
                 "environment": self.settings.environment,
+                "memory_search_k": self.settings.memory_search_k,
+                "ltm_count": len(ltm_memories),
+                "working_mem_count": len(final_state.working_mem),
             },
         }
 
