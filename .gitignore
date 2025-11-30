@@ -8,3 +8,4 @@
 # 실험 결과
 results/
 *.log
+.claude/

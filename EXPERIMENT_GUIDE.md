@@ -66,8 +66,8 @@
 **측정 방법**:
 - Bull/Bear 라운드 수 변화에 따른 성과 비교
   - 1 라운드 (최소 협업): Bull → Bear → Trader → Manager
-  - 2 라운드 (중간 협업): Bull → Bull → Bear → Trader → Manager
-  - 3 라운드 (최대 협업): Bull → Bull → Bull → Bear → Trader → Manager
+  - 2 라운드 (중간 협업): Bull → Bear → Bull → Bear → Trader → Manager
+  - 3 라운드 (최대 협업): Bull → Bear → Bull → Bear → Bull → Bear → Trader → Manager
 - 에이전트별 의견 다양성 vs 수익률 상관관계
 
 **측정 지표**:
@@ -272,7 +272,7 @@ python scripts/run_backtest.py \
   --ticker AAPL \
   --start-date 2025-01-01 \
   --end-date 2025-08-31 \
-  --seed 1 \
+  --seed 42 \
   --use-memory \
   --output-dir results/exp1_warmup
 
@@ -382,17 +382,17 @@ print(f"Learning slope: {slope:.4f}, p-value: {p_value:.4f}")
 | 조건 | Bull/Bear 라운드 | 의미 |
 |------|------------------|------|
 | **최소 협업** | 1 라운드 | Bull → Bear → Trader (단순) |
-| **중간 협업** | 2 라운드 | Bull → Bull → Bear → Trader (토론) |
-| **최대 협업** | 3 라운드 | Bull → Bull → Bull → Bear → Trader (충분한 토론) |
+| **중간 협업** | 2 라운드 | Bull → Bear → Bull → Bear → Trader (번갈아가며 토론) |
+| **최대 협업** | 3 라운드 | Bull → Bear → Bull → Bear → Bull → Bear → Trader (충분한 토론) |
 
-#### 5.2.3 실험 절차 (Windows)
+#### 5.2.3 실험 절차 (Bash)
 ```bash
 # 0. 메모리 초기화 (필수!)
 python scripts/reset_memory.py --all
 # "yes" 입력하여 확인
 
 # 1. 1 라운드 (최소 협업)
-$env:DEBATE_MAX_BB_ROUNDS=1
+export DEBATE_MAX_BB_ROUNDS=1
 python scripts/run_backtest.py \
   --ticker AAPL \
   --seed 0 \
@@ -404,24 +404,24 @@ python scripts/reset_memory.py --all
 # "yes" 입력하여 확인
 
 # 3. 2 라운드 (중간 협업)
-$env:DEBATE_MAX_BB_ROUNDS=2
+export DEBATE_MAX_BB_ROUNDS=2
 python scripts/run_backtest.py \
   --ticker AAPL \
   --seed 0 \
   --use-memory \
-  --output-dir results/exp2_rounds_1
+  --output-dir results/exp2_rounds_2
 
 # 4. 3 라운드 전 초기화 (필수!)
 python scripts/reset_memory.py --all
 # "yes" 입력하여 확인
 
 # 5. 3 라운드 (최대 협업)
-$env:DEBATE_MAX_BB_ROUNDS=3
+export DEBATE_MAX_BB_ROUNDS=3
 python scripts/run_backtest.py \
   --ticker AAPL \
   --seed 0 \
   --use-memory \
-  --output-dir results/exp2_rounds_1
+  --output-dir results/exp2_rounds_3
 ```
 
 #### 5.2.4 분석 방법
@@ -1293,22 +1293,22 @@ ls results/
 #### 실험 1: 메모리 효과 검증 (필수 ⭐⭐⭐)
 ```bash
 # 대조군 (메모리 없음) - 시드 0~9
-for ($seed=0; $seed -le 9; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --seed $seed `
-    --no-memory `
+for seed in {0..9}; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --seed $seed \
+    --no-memory \
     --output-dir results/exp1_no_memory
-}
+done
 
 # 실험군 (메모리 사용) - 시드 0~9
-for ($seed=0; $seed -le 9; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --seed $seed `
-    --use-memory `
+for seed in {0..9}; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --seed $seed \
+    --use-memory \
     --output-dir results/exp1_with_memory
-}
+done
 
 # 분석
 python scripts/analyze_results.py --exp exp1_memory_effect --plot
@@ -1317,66 +1317,66 @@ python scripts/analyze_results.py --exp exp1_memory_effect --plot
 #### 실험 2: 멀티 에이전트 협업 (중요 ⭐⭐)
 ```bash
 # 1 라운드
-$env:DEBATE_MAX_BB_ROUNDS=1
-for ($seed=0; $seed -le 4; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --seed $seed `
-    --use-memory `
+export DEBATE_MAX_BB_ROUNDS=1
+for seed in {0..4}; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --seed $seed \
+    --use-memory \
     --output-dir results/exp2_rounds_1
-}
+done
 
 # 2 라운드 (기본값)
-$env:DEBATE_MAX_BB_ROUNDS=2
-for ($seed=0; $seed -le 4; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --seed $seed `
-    --use-memory `
+export DEBATE_MAX_BB_ROUNDS=2
+for seed in {0..4}; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --seed $seed \
+    --use-memory \
     --output-dir results/exp2_rounds_2
-}
+done
 
 # 3 라운드
-$env:DEBATE_MAX_BB_ROUNDS=3
-for ($seed=0; $seed -le 4; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --seed $seed `
-    --use-memory `
+export DEBATE_MAX_BB_ROUNDS=3
+for seed in {0..4}; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --seed $seed \
+    --use-memory \
     --output-dir results/exp2_rounds_3
-}
+done
 ```
 
 #### 실험 3: 학습 곡선 분석 (필수 ⭐⭐⭐)
 ```bash
 # 장기 백테스트 (6개월)
 # 메모리 없음
-for ($seed=0; $seed -le 4; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --start-date 2024-01-01 `
-    --end-date 2024-06-30 `
-    --seed $seed `
-    --no-memory `
+for seed in {0..4}; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --start-date 2024-01-01 \
+    --end-date 2024-06-30 \
+    --seed $seed \
+    --no-memory \
     --output-dir results/exp3_learning/no_memory
-}
+done
 
 # 메모리 사용
-for ($seed=0; $seed -le 4; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --start-date 2024-01-01 `
-    --end-date 2024-06-30 `
-    --seed $seed `
-    --use-memory `
+for seed in {0..4}; do
+  python scripts/run_backtest.py \
+    --ticker AAPL \
+    --start-date 2024-01-01 \
+    --end-date 2024-06-30 \
+    --seed $seed \
+    --use-memory \
     --output-dir results/exp3_learning/with_memory
-}
+done
 
 # 학습 곡선 분석
-python scripts/analyze_learning_curve.py `
-  --no-memory-dir results/exp3_learning/no_memory `
-  --with-memory-dir results/exp3_learning/with_memory `
-  --plot `
+python scripts/analyze_learning_curve.py \
+  --no-memory-dir results/exp3_learning/no_memory \
+  --with-memory-dir results/exp3_learning/with_memory \
+  --plot \
   --output results/learning_curve_analysis.csv
 ```
 

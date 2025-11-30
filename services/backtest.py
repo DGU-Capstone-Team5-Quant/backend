@@ -159,6 +159,9 @@ class BacktestService:
                 else:
                     action = str(decision_field or "").upper()
 
+                # 메모리 정보 추출 (각 의사결정에서 사용된 메모리 기록)
+                memories_info = sim_result.summary.get("memories", {})
+
                 price = latest.get("close", 0.0)
                 prev_price = closes.iloc[idx - 1] if idx > 0 else price
                 prev_equity = cash + position * prev_price
@@ -249,6 +252,12 @@ class BacktestService:
                         "fee": float(fee),
                         "pnl": float(step_pnl),
                         "cumulative_pnl": float(equity - initial_capital),
+                        "memories": {
+                            "long_term_count": len(memories_info.get("long_term", [])),
+                            "working_count": len(memories_info.get("working", [])),
+                            "long_term": memories_info.get("long_term", []),
+                            "working": memories_info.get("working", []),
+                        },
                     }
                 )
 

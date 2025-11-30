@@ -9,7 +9,12 @@
       "Bash($env:PYTHONIOENCODING=\"utf-8\")",
       "Bash(chcp 65001)",
       "Bash(curl:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(dir:*)",
+      "Bash(uv pip uninstall:*)",
+      "Bash(uv pip install:*)",
+      "Bash(export DEBATE_MAX_BB_ROUNDS=1)",
+      "Bash(timeout 30 python:*)"
     ],
     "deny": [],
     "ask": []

@@ -111,14 +111,14 @@ async def main():
         else:
             # 티커 필터링 확인
             if args.ticker:
-                ticker_matches = [doc for doc, _ in all_results if doc.metadata and doc.metadata.get("ticker") == args.ticker]
+                ticker_matches = [(doc, score) for doc, score in all_results if doc.metadata and doc.metadata.get("ticker") == args.ticker]
                 if ticker_matches:
                     print(f"✅ {args.ticker} 메모리가 총 {len(ticker_matches)}개 저장되어 있습니다.")
                     print("   → use-memory 실험이 의미 있는 데이터를 사용합니다.")
 
                     # Role별 통계
                     from collections import Counter
-                    roles = [doc.metadata.get("role", "unknown") for doc, _ in ticker_matches if doc.metadata]
+                    roles = [doc.metadata.get("role", "unknown") for doc, score in ticker_matches if doc.metadata]
                     role_counts = Counter(roles)
                     print("\n   📊 Role별 분포:")
                     for role, count in role_counts.most_common():

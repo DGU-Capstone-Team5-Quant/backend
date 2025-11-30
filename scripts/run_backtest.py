@@ -9,6 +9,7 @@ import asyncio
 import argparse
 import json
 import sys
+import logging
 from pathlib import Path
 from datetime import datetime
 import csv
@@ -48,6 +49,20 @@ async def main():
     parser.add_argument("--verbose", action="store_true", help="자세한 로그 출력")
 
     args = parser.parse_args()
+
+    # 로깅 설정
+    if args.verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S'
+        )
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S'
+        )
 
     include_news = not args.no_news
     use_memory = not args.no_memory
