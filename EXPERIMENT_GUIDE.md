@@ -1515,3 +1515,12 @@ ggsave("results/exp1_boxplot.png", width = 8, height = 6, dpi = 300)
 4. GitHub Issues 검색
 
 **성공적인 연구를 기원합니다!** 🎓📊
+
+## 단축 실험 스크립트 예시
+python scripts/run_backtest.py \
+  --ticker AAPL \
+  --start-date 2025-10-01 \
+  --end-date 2025-10-05 \
+  --seed 42 \
+  --no-memory \
+  --output-dir results/exp_quick_check
