@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import settings
 
 
-async def reset_redis(ticker: str = None):
+async def reset_redis(ticker: str = None, auto_confirm: bool = False):
     """Redis 메모리 초기화"""
     try:
         import redis
@@ -53,10 +53,11 @@ async def reset_redis(ticker: str = None):
         else:
             # 전체 삭제
             print("\n⚠️  경고: 모든 Redis 키를 삭제합니다!")
-            confirm = input("계속하시겠습니까? (yes/no): ")
-            if confirm.lower() != "yes":
-                print("❌ 취소됨")
-                return
+            if not auto_confirm:
+                confirm = input("계속하시겠습니까? (yes/no): ")
+                if confirm.lower() != "yes":
+                    print("❌ 취소됨")
+                    return
 
             # FT.DROPINDEX로 인덱스 삭제
             try:
@@ -77,7 +78,7 @@ async def reset_redis(ticker: str = None):
         print("   Redis가 실행 중이 아니거나 연결 정보가 잘못되었습니다.")
 
 
-async def reset_postgres(ticker: str = None):
+async def reset_postgres(ticker: str = None, auto_confirm: bool = False):
     """PostgreSQL 시뮬레이션 로그 초기화"""
     try:
         from db.session import SessionLocal, engine
@@ -110,10 +111,11 @@ async def reset_postgres(ticker: str = None):
             else:
                 # 전체 삭제
                 print("\n⚠️  경고: 모든 시뮬레이션 로그를 삭제합니다!")
-                confirm = input("계속하시겠습니까? (yes/no): ")
-                if confirm.lower() != "yes":
-                    print("❌ 취소됨")
-                    return
+                if not auto_confirm:
+                    confirm = input("계속하시겠습니까? (yes/no): ")
+                    if confirm.lower() != "yes":
+                        print("❌ 취소됨")
+                        return
 
                 # 테이블 drop & recreate
                 async with engine.begin() as conn:
@@ -186,6 +188,7 @@ async def main():
 
     # 확인 모드
     parser.add_argument("--check", action="store_true", help="현재 메모리 모드만 확인")
+    parser.add_argument("--yes", action="store_true", help="자동 확인 (확인 프롬프트 건너뛰기)")
 
     args = parser.parse_args()
 
@@ -210,11 +213,11 @@ async def main():
 
     # Redis 초기화
     if args.all or args.redis:
-        await reset_redis(ticker=args.ticker)
+        await reset_redis(ticker=args.ticker, auto_confirm=args.yes)
 
     # PostgreSQL 초기화
     if args.all or args.postgres:
-        await reset_postgres(ticker=args.ticker)
+        await reset_postgres(ticker=args.ticker, auto_confirm=args.yes)
 
     print("\n" + "=" * 80)
     print("✅ 초기화 완료!")

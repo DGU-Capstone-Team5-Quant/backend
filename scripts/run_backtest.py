@@ -50,7 +50,7 @@ async def main():
 
     args = parser.parse_args()
 
-    # 로깅 설정
+    # 로깅 설정 - 거래 로그만 표시
     if args.verbose:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -58,11 +58,19 @@ async def main():
             datefmt='%H:%M:%S'
         )
     else:
+        # 기본 로깅 레벨을 WARNING으로 설정 (INFO 로그 숨김)
         logging.basicConfig(
-            level=logging.INFO,
+            level=logging.WARNING,
             format='%(asctime)s %(name)s %(levelname)s %(message)s',
             datefmt='%H:%M:%S'
         )
+        # httpx 로거 완전히 끄기
+        logging.getLogger('httpx').setLevel(logging.CRITICAL)
+        logging.getLogger('httpcore').setLevel(logging.CRITICAL)
+        # 다른 시스템 로거들도 끄기
+        logging.getLogger('services').setLevel(logging.WARNING)
+        logging.getLogger('redisvl').setLevel(logging.WARNING)
+        logging.getLogger('finmem').setLevel(logging.WARNING)
 
     include_news = not args.no_news
     use_memory = not args.no_memory
@@ -82,7 +90,10 @@ async def main():
     print(f"LLM 모델: {settings.ollama_model}")
     print("=" * 80)
 
-    print("\nRunning backtest...\n")
+    print("\n" + "=" * 80)
+    print("백테스트 실행 중...")
+    print("=" * 80 + "\n")
+
     sim_service = SimulationService(settings)
     service = BacktestService(sim_service, settings)
 
@@ -101,7 +112,8 @@ async def main():
             initial_capital=args.initial_capital,
         )
 
-        print("\nBacktest completed!")
+        print("\n" + "=" * 80)
+        print("백테스트 완료!")
         print("=" * 80)
 
         metrics = result.summary

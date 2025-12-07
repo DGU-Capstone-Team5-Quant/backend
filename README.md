@@ -1,4 +1,4 @@
-# FinMem Trading System
+# Quant Trading System
 
 메모리 기반 멀티 에이전트 트레이딩 시스템
 
@@ -7,60 +7,40 @@
 ### 1. 환경 설정
 
 ```bash
-# uv 설치: https://astral.sh/uv
 # 가상환경 생성 및 의존성 설치
 uv venv .venv
 uv sync
 
-# Ollama 설치 (Windows)
+# Ollama 설치 및 모델 다운로드
 winget install Ollama.Ollama
-
-# 모델 다운로드
 ollama pull llama3.1:8b
+
+# Redis 시작 (Docker)
+docker run -d -p 6379:6379 redis:latest
 ```
 
-### 2. 환경 변수 설정 (.env)
+### 2. Quant CLI 실행 (추천!)
 
-**최소 설정 (로컬 테스트):**
 ```bash
-# .env 파일 없어도 됨! (기본값으로 작동)
+# 인터랙티브 CLI 시작 (가상환경 자동 감지!)
+python quant.py
 ```
 
-**실제 주가 데이터 사용 시:**
-```bash
-RAPID_API_KEY=your_key
-RAPID_API_HOST=twelve-data1.p.rapidapi.com
-RAPID_API_PRICE_URL_INTRADAY=https://twelve-data1.p.rapidapi.com/time_series
-RAPID_API_PRICE_URL_DAILY=https://twelve-data1.p.rapidapi.com/time_series
-```
+**💡 Tip:** 가상환경을 활성화하지 않아도 됩니다! CLI가 자동으로 `.venv`를 찾아서 사용합니다.
 
-### 3. 실행
+**CLI 메뉴:**
+- 📊 백테스팅 (빠른 시작 / 커스텀 설정 / 결과 조회)
+- 🚀 실시간 거래 (개발 예정)
+- 🧠 메모리 관리 (통계 / 초기화 / 내보내기)
+- 📈 대시보드 (시스템 상태 한눈에 보기)
 
-```bash
-# 단일 시뮬레이션
-python scripts/run_simulation.py --ticker AAPL --seed 42
-
-# 백테스트
-python scripts/run_backtest.py --ticker AAPL --start-date 2024-01-01 --end-date 2024-12-31 --seed 42
-```
-
-## 📖 사용법
-
-### 단일 시뮬레이션
+### 3. 수동 백테스팅 (고급)
 
 ```bash
-python scripts/run_simulation.py \
-  --ticker AAPL \
-  --window 30 \
-  --seed 42 \
-  --mode intraday \
-  --interval 1h \
-  --use-memory
-```
+# 간단한 백테스트
+python scripts/run_backtest.py --ticker AAPL --seed 42
 
-### 백테스트
-
-```bash
+# 기간 지정
 python scripts/run_backtest.py \
   --ticker AAPL \
   --start-date 2024-01-01 \
@@ -68,156 +48,40 @@ python scripts/run_backtest.py \
   --seed 42
 ```
 
-**결과:**
-- `results/backtest_*.json` - 전체 결과
-- `results/backtest_*_metrics.csv` - 성과 메트릭스
-- `results/backtest_*_trades.csv` - 거래 내역
+## 📊 주요 기능
 
-### 배치 실험 (논문 연구용)
+- **백테스팅**: 과거 데이터로 전략 검증
+- **실시간 거래**: 자동 매매 시스템 (개발 예정)
+- **멀티 에이전트**: Bull, Bear, Manager 협업
+- **메모리 학습**: 과거 거래 경험 학습
 
-```bash
-# 여러 시드로 대규모 실험 (for loop 사용)
-# Bash/Linux/Mac:
-for seed in 42 43 44 45 46; do
-  python scripts/run_backtest.py \
-    --ticker AAPL \
-    --start-date 2024-01-01 \
-    --end-date 2024-06-30 \
-    --seed $seed \
-    --use-memory \
-    --output-dir results/with_memory
-done
-
-# PowerShell (Windows):
-for ($seed=42; $seed -le 46; $seed++) {
-  python scripts/run_backtest.py `
-    --ticker AAPL `
-    --start-date 2024-01-01 `
-    --end-date 2024-06-30 `
-    --seed $seed `
-    --use-memory `
-    --output-dir results/with_memory
-}
-```
-
-## 🧪 논문 실험 예시
-
-### 1. 학습 효과 검증 (메모리 vs 비메모리)
+## 🔧 유틸리티
 
 ```bash
-# 대조군 (메모리 미사용)
-for seed in 42 43 44 45 46; do
-  python scripts/run_backtest.py \
-    --ticker AAPL \
-    --start-date 2024-01-01 \
-    --end-date 2024-06-30 \
-    --seed $seed \
-    --no-memory \
-    --output-dir results/no_memory
-done
+# 메모리 초기화
+python scripts/reset_memory.py --all
 
-# 실험군 (메모리 사용)
-for seed in 42 43 44 45 46; do
-  python scripts/run_backtest.py \
-    --ticker AAPL \
-    --start-date 2024-01-01 \
-    --end-date 2024-06-30 \
-    --seed $seed \
-    --use-memory \
-    --output-dir results/with_memory
-done
+# 메모리 상태 확인
+python scripts/check_memory.py
 ```
-
-### 2. 재현성 테스트
-
-```bash
-# 같은 seed로 3회 실행 → 결과가 정확히 동일해야 함
-python scripts/run_backtest.py --ticker AAPL --seed 42
-python scripts/run_backtest.py --ticker AAPL --seed 42
-python scripts/run_backtest.py --ticker AAPL --seed 42
-```
-
-## ⚙️ 환경 변수 (.env)
-
-### LLM 설정
-- `OLLAMA_MODEL` (기본: llama3.1:8b): 사용할 Ollama 모델
-- `OLLAMA_BASE_URL` (기본: http://localhost:11434): Ollama 서버 주소
-- `LLM_TEMPERATURE` (기본: 0.3): 생성 temperature
-- `LLM_MAX_TOKENS` (기본: 512): 최대 토큰 수
-
-### 메모리 설정
-- `MEMORY_STORE_MANAGER_ONLY` (기본: true): Manager만 메모리 저장
-- `MEMORY_SEARCH_K` (기본: 3): 검색할 메모리 개수
-- `MEMORY_RECENCY_LAMBDA` (기본: 0.01): 최근성 페널티 (일당)
-- `MEMORY_DUPLICATE_THRESHOLD` (기본: 0.9): 중복 임계값
-- `MEMORY_TTL_DAYS` (기본: 30): 메모리 만료 기간
-- `WORKING_MEM_MAX` (기본: 10): 작업 메모리 최대 크기
-
-### 백테스트 설정
-- `BACKTEST_FEE_BPS` (기본: 0): 거래 수수료 (bps)
-- `BACKTEST_SLIPPAGE_BPS` (기본: 0): 슬리피지 (bps)
-- `BACKTEST_STOP_LOSS` (기본: -0.05): 손절 (-5%)
-- `BACKTEST_TAKE_PROFIT` (기본: 0.1): 익절 (+10%)
-
-### 데이터 소스
-- **가격 데이터**: RapidAPI (Twelve Data) 사용. `RAPID_API_KEY`, `RAPID_API_HOST`, `RAPID_API_PRICE_URL_INTRADAY`, `RAPID_API_PRICE_URL_DAILY` 설정 필요.
-- **뉴스 데이터**: Google News RSS 사용 (기본값). API 키 불필요.
-
-## 📊 성과 메트릭스
-
-- `total_return`: 총 수익률
-- `win_rate`: 승률
-- `total_trades`: 총 거래 횟수
-- `sharpe_ratio`: 샤프 비율
-- `max_drawdown`: 최대 낙폭
-- `final_balance`: 최종 잔고
 
 ## 📁 프로젝트 구조
 
 ```
 backend/
-├── scripts/               # CLI 스크립트
-│   ├── run_simulation.py  # 단일 시뮬레이션 실행
-│   └── run_backtest.py    # 백테스트 실행
-├── services/             # 핵심 로직
-│   ├── simulation.py
-│   ├── backtest.py
-│   ├── llm.py           # Ollama 클라이언트
-│   └── feedback.py
-├── memory/              # 메모리 시스템
-├── agents/              # 에이전트
-└── results/             # 실험 결과 (자동 생성)
+├── scripts/          # CLI 도구
+├── services/         # 백테스팅, 실시간 거래 엔진
+├── agents/           # Bull, Bear, Manager 에이전트
+├── memory/           # Redis 기반 메모리 시스템
+└── results/          # 결과 저장
 ```
 
-## 🐛 트러블슈팅
+## 📚 문서
 
-### Ollama 연결 실패
-```bash
-ollama list              # 설치 확인
-ollama run llama3.1:8b  # 모델 테스트
-```
+자세한 내용은 [DOCS.md](DOCS.md)를 참고하세요.
 
-### Redis 필수
-- **이 시스템은 Redis가 필수입니다** (메모리 저장소)
-- Redis 없이는 실행 불가 (연결 실패 시 시스템 중단)
-- Docker로 간단히 설치 가능:
-```bash
-docker run -d -p 6379:6379 redis:latest
-```
+## ⚠️ 필수 요구사항
 
-### 메모리 초기화
-```bash
-# 실험 전 초기화 (필수!)
-python scripts/reset_memory.py --all
-# "yes" 입력하여 확인
-```
-- 각 실험 조건 전에 반드시 초기화 필요
-
-## VS Code 설정
-- `.vscode/settings.json`이 `.venv` 자동 활성화 설정
-- Python 3.12 사용 (`.python-version`)
-- VS Code에서 터미널 열면 자동으로 `(.venv)` 활성화
-
-## 📚 참고
-- [Ollama](https://ollama.com)
-- [Llama 3.1](https://ollama.com/library/llama3.1)
+- Python 3.12+
+- Ollama (LLM)
+- Redis (메모리 저장소)

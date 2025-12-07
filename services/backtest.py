@@ -123,7 +123,19 @@ class BacktestService:
             stop_loss = self.settings.backtest_stop_loss
             take_profit = self.settings.backtest_take_profit
 
-            for idx in range(window - 1, len(prices), step):
+            # 전체 거래 횟수 계산 및 출력
+            total_steps = len(list(range(window - 1, len(prices), step)))
+            print(f"예상 거래 결정 횟수: {total_steps}회", flush=True)
+
+            if total_steps == 0:
+                raise ValueError(
+                    f"거래 가능한 데이터가 없습니다. "
+                    f"데이터 포인트: {len(prices)}개, 윈도우: {window}, "
+                    f"기간: {start_date} ~ {end_date}. "
+                    f"과거 날짜로 기간을 설정해주세요."
+                )
+
+            for step_idx, idx in enumerate(range(window - 1, len(prices), step), 1):
                 slice_df = prices.iloc[: idx + 1]
                 latest = slice_df.tail(1).to_dict(orient="records")[0]
                 snapshot = {
@@ -239,27 +251,39 @@ class BacktestService:
                 step_return = step_pnl / float(prev_equity if prev_equity else 1.0)
                 returns.append(step_return)
 
-                trades.append(
-                    {
-                        "ts": slice_df.index[-1].to_pydatetime(),
-                        "action": action,
-                        "price": float(price),
-                        "trade_shares": float(delta),
-                        "position_shares": float(position),
-                        "trade_notional": float(trade_notional),
-                        "cash": float(cash),
-                        "equity": float(equity),
-                        "fee": float(fee),
-                        "pnl": float(step_pnl),
-                        "cumulative_pnl": float(equity - initial_capital),
-                        "memories": {
-                            "long_term_count": len(memories_info.get("long_term", [])),
-                            "working_count": len(memories_info.get("working", [])),
-                            "long_term": memories_info.get("long_term", []),
-                            "working": memories_info.get("working", []),
-                        },
-                    }
-                )
+                # 거래 정보 기록
+                trade_info = {
+                    "ts": slice_df.index[-1].to_pydatetime(),
+                    "action": action,
+                    "price": float(price),
+                    "trade_shares": float(delta),
+                    "position_shares": float(position),
+                    "trade_notional": float(trade_notional),
+                    "cash": float(cash),
+                    "equity": float(equity),
+                    "fee": float(fee),
+                    "pnl": float(step_pnl),
+                    "cumulative_pnl": float(equity - initial_capital),
+                    "memories": {
+                        "long_term_count": len(memories_info.get("long_term", [])),
+                        "working_count": len(memories_info.get("working", [])),
+                        "long_term": memories_info.get("long_term", []),
+                        "working": memories_info.get("working", []),
+                    },
+                }
+                trades.append(trade_info)
+
+                # 진행률 출력 (항상)
+                print(f"PROGRESS: {step_idx}/{total_steps}", flush=True)
+
+                # 거래 발생 시 실시간 로그 출력
+                if delta != 0:  # 실제 거래가 발생한 경우만
+                    trade_type = "매수" if delta > 0 else "매도"
+                    print(f"[거래 #{len(trades):3d}] {slice_df.index[-1].strftime('%Y-%m-%d %H:%M')} | "
+                          f"{trade_type:2s} {abs(delta):6.2f}주 @ ${price:7.2f} | "
+                          f"포지션: {position:6.2f}주 | "
+                          f"수익: ${step_pnl:+8.2f} | "
+                          f"잔고: ${equity:,.2f}", flush=True)
 
             summary = self._summarize(
                 ticker=ticker,
