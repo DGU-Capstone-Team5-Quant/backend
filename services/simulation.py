@@ -369,7 +369,7 @@ class SimulationService:
                 obj = json.loads(resp)
                 return json.dumps(obj, ensure_ascii=False)
             except Exception as exc:
-                self.logger.warning("LLM generate/parse failed (seed=%s, attempt=%d): %s", current_seed, attempt, exc)
+                self.logger.debug("LLM generate/parse failed (seed=%s, attempt=%d): %s", current_seed, attempt, exc)
                 # 재시도 시 seed를 제거하여 다른 결과 유도
                 current_seed = None
                 continue

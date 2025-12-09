@@ -94,12 +94,29 @@ class BacktestService:
         t0 = timeit.default_timer()
         try:
             loader = self.sim_service.loader
+
+            # 윈도우 데이터를 확보하기 위해 start_date를 앞당김
+            # 사용자가 지정한 기간의 모든 날에 거래하려면 그 이전 데이터가 필요
+            actual_start_date = start_date
+            fetch_start = start_date
+
+            if start_date:
+                # 간격에 따라 윈도우 기간 계산
+                if interval == "1day":
+                    # 일봉: window * 1.5일 정도 (주말 고려)
+                    window_days = int(window * 1.5) + 2
+                else:
+                    # 시간봉: 넉넉하게 확보
+                    window_days = window + 14
+
+                fetch_start = (pd.to_datetime(start_date) - pd.Timedelta(days=window_days)).strftime("%Y-%m-%d")
+
             prices = await loader.fetch_prices(
                 ticker,
-                window=window,
+                window=window * 2,  # 넉넉하게 요청
                 mode="intraday",
                 interval=interval,
-                start_date=start_date,
+                start_date=fetch_start,
                 end_date=end_date,
             )
             prices = loader.add_indicators(prices)
@@ -107,6 +124,28 @@ class BacktestService:
             if prices.empty:
                 raise ValueError("no price data returned for backtest")
             closes = prices["close"]
+
+            # 실제 거래 시작 인덱스 찾기 (사용자가 지정한 start_date 이후)
+            first_trade_idx = 0
+            if actual_start_date:
+                start_ts = pd.to_datetime(actual_start_date)
+                # start_date 이후의 첫 데이터 인덱스 찾기
+                valid_mask = prices.index >= start_ts
+                if valid_mask.sum() == 0:
+                    raise ValueError(f"지정한 시작일({actual_start_date}) 이후 데이터가 없습니다.")
+
+                first_valid_idx = prices.index[valid_mask][0]
+                first_trade_idx = prices.index.get_loc(first_valid_idx)
+
+                # 윈도우 확보 확인
+                if first_trade_idx < window:
+                    raise ValueError(
+                        f"윈도우 데이터가 부족합니다. "
+                        f"시작일({actual_start_date})로부터 {window}개의 과거 데이터가 필요하지만 {first_trade_idx}개만 있습니다. "
+                        f"시작일을 더 나중으로 설정하거나, 윈도우를 줄여주세요."
+                    )
+            else:
+                first_trade_idx = window
 
             backtest_id = str(uuid4())
             trades: List[Dict[str, Any]] = []
@@ -123,19 +162,20 @@ class BacktestService:
             stop_loss = self.settings.backtest_stop_loss
             take_profit = self.settings.backtest_take_profit
 
-            # 전체 거래 횟수 계산 및 출력
-            total_steps = len(list(range(window - 1, len(prices), step)))
+            # 전체 거래 횟수 계산 및 출력 (사용자 지정 start_date부터)
+            total_steps = len(list(range(first_trade_idx, len(prices), step)))
             print(f"예상 거래 결정 횟수: {total_steps}회", flush=True)
 
             if total_steps == 0:
                 raise ValueError(
                     f"거래 가능한 데이터가 없습니다. "
                     f"데이터 포인트: {len(prices)}개, 윈도우: {window}, "
+                    f"첫 거래 인덱스: {first_trade_idx}, "
                     f"기간: {start_date} ~ {end_date}. "
                     f"과거 날짜로 기간을 설정해주세요."
                 )
 
-            for step_idx, idx in enumerate(range(window - 1, len(prices), step), 1):
+            for step_idx, idx in enumerate(range(first_trade_idx, len(prices), step), 1):
                 slice_df = prices.iloc[: idx + 1]
                 latest = slice_df.tail(1).to_dict(orient="records")[0]
                 snapshot = {
@@ -303,7 +343,7 @@ class BacktestService:
                 include_news=include_news,
                 use_memory=use_memory,
                 shares=shares,
-                start_ts=prices.index[window - 1],
+                start_ts=prices.index[first_trade_idx],
                 end_ts=prices.index[-1],
             )
 

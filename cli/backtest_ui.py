@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import subprocess
 import json
 from pathlib import Path
+from cli.visualization import BacktestVisualizer
 
 console = Console()
 
@@ -50,13 +51,21 @@ class BacktestUI:
         if not ticker:
             return
 
-        # 기본 설정 (빠른 실행을 위해 1일 간격, 30일 기간)
-        # 종료일을 어제로 설정 (오늘은 데이터가 없을 수 있음)
+        # 기본 설정 (빠른 실행을 위해 1일 간격, 고정 기간)
+        # 2025-11-21 ~ 2025-12-02 (약 12일 거래일)
+        start_date = "2025-11-21"
+        end_date = "2025-12-02"
+
+        # 기간에 맞춰 윈도우 자동 계산
+        # 12일 기간이면 윈도우 3일로 설정하여 더 많은 거래 기회 제공
+        period_days = 12
+        window = max(3, min(5, int(period_days * 0.25)))  # 최소 3일, 최대 5일
+
         config = {
             "ticker": ticker,
-            "start_date": (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
-            "end_date": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
-            "window": 10,
+            "start_date": start_date,
+            "end_date": end_date,
+            "window": window,
             "interval": "1day",
             "seed": 42,
             "use_memory": True
@@ -130,12 +139,36 @@ class BacktestUI:
         ).ask()
         interval = interval.split()[0]  # "1day (일봉)" -> "1day"
 
-        # 윈도우
-        window = questionary.text(
-            "슬라이딩 윈도우 (과거 데이터 참조 길이):",
-            default="10" if interval == "1day" else "30",
-            style=custom_style
-        ).ask()
+        # 기간에 맞춰 윈도우 자동 계산
+        period_days = (end - start).days
+
+        # Interval에 따른 데이터 포인트 수 추정 및 윈도우 자동 설정
+        # 주의: 주식시장은 하루 약 6.5시간만 거래 (09:30-16:00)
+        if interval == "1day":
+            estimated_data_points = period_days
+            window = max(3, min(15, int(period_days * 0.2)))
+        elif interval == "1h":
+            # 1시간봉: 하루 약 6.5개 (장 시간만)
+            estimated_data_points = int(period_days * 6.5)
+            window = max(10, min(50, int(estimated_data_points * 0.2)))
+        elif interval == "4h":
+            # 4시간봉: 하루 약 1.5개 (장 시간 6.5h ÷ 4h)
+            estimated_data_points = int(period_days * 1.5)
+            window = max(5, min(20, int(estimated_data_points * 0.3)))
+        else:
+            # 2시간봉: 하루 약 3개
+            estimated_data_points = int(period_days * 3)
+            window = max(7, min(30, int(estimated_data_points * 0.25)))
+
+        # 예상 거래 횟수 (데이터 포인트 - 윈도우)
+        estimated_trades = max(0, estimated_data_points - window)
+
+        # 자동 설정 정보 표시
+        console.print(f"\n[dim]✓ 윈도우 자동 설정: {window} (기간 {period_days}일, {interval})[/dim]")
+        if estimated_trades > 0:
+            console.print(f"[dim]  📊 예상 거래 횟수: 약 {estimated_trades}회[/dim]\n")
+        else:
+            console.print(f"[yellow]  ⚠️  경고: 기간이 너무 짧아 거래가 불가능할 수 있습니다![/yellow]\n")
 
         # 시드
         seed = questionary.text(
@@ -396,8 +429,70 @@ class BacktestUI:
 
                 console.print(trade_table)
 
+            # 차트 표시 옵션
+            console.print()
+            if questionary.confirm("📊 차트를 생성하시겠습니까?", default=True, style=custom_style).ask():
+                self._show_charts(result_path)
+
         except Exception as e:
             console.print(f"[red]결과 파일을 읽을 수 없습니다: {e}[/red]")
+
+    def _show_charts(self, result_path: Path):
+        """차트 생성 및 표시 (루프로 여러 차트 선택 가능)"""
+        try:
+            visualizer = BacktestVisualizer()
+            result = visualizer.load_result(result_path)
+
+            # 차트 저장 경로
+            base_name = result_path.stem
+            output_dir = result_path.parent / 'charts'
+            output_dir.mkdir(exist_ok=True)
+
+            # 차트 선택 루프
+            while True:
+                console.print()
+
+                # 차트 타입 선택
+                choices = [
+                    "📈 통합 대시보드 (전체 차트)",
+                    "💰 자본 변화 그래프",
+                    "📊 주가 및 매매 시점",
+                    "← 뒤로가기"
+                ]
+
+                choice = questionary.select(
+                    "어떤 차트를 보시겠습니까?",
+                    choices=choices,
+                    style=custom_style
+                ).ask()
+
+                if not choice or "뒤로가기" in choice:
+                    break
+
+                console.print(f"\n[cyan]차트 생성 중...[/cyan]")
+
+                # 선택한 차트 생성
+                if "통합 대시보드" in choice:
+                    save_path = output_dir / f"{base_name}_dashboard.png"
+                    visualizer.plot_combined_dashboard(result, save_path)
+                elif "자본 변화" in choice:
+                    save_path = output_dir / f"{base_name}_equity.png"
+                    visualizer.plot_equity_curve(result, save_path)
+                elif "주가 및 매매" in choice:
+                    save_path = output_dir / f"{base_name}_trades.png"
+                    visualizer.plot_trades_on_price(result, save_path)
+
+                console.print(f"[bold green]✓ 차트가 저장되었습니다: {save_path}[/bold green]")
+
+                # 파일 열기 옵션
+                if questionary.confirm("차트 파일을 여시겠습니까?", default=True, style=custom_style).ask():
+                    import os
+                    os.startfile(save_path)  # Windows에서 기본 이미지 뷰어로 열기
+
+        except Exception as e:
+            console.print(f"[red]차트 생성 실패: {e}[/red]")
+            import traceback
+            traceback.print_exc()
 
     def run(self):
         """백테스팅 메뉴 실행"""
