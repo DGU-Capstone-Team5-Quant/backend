@@ -8,7 +8,6 @@ from rich.panel import Panel
 from cli.backtest_ui import BacktestUI
 from cli.live_trading_ui import LiveTradingUI
 from cli.memory_ui import MemoryUI
-from cli.dashboard import Dashboard
 
 console = Console()
 
@@ -36,7 +35,6 @@ class MainMenu:
             "📊 백테스팅 (Backtesting)",
             "🚀 실시간 거래 (Live Trading)",
             "🧠 메모리 관리 (Memory Management)",
-            "📈 대시보드 (Dashboard)",
             "❌ 종료 (Exit)"
         ]
 
@@ -66,8 +64,6 @@ class MainMenu:
                     LiveTradingUI().run()
                 elif "메모리 관리" in choice:
                     MemoryUI().run()
-                elif "대시보드" in choice:
-                    Dashboard().show()
                 elif "종료" in choice:
                     self.running = False
                     console.print("\n[bold cyan]Quant를 이용해주셔서 감사합니다! 👋[/bold cyan]\n")

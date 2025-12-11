@@ -161,21 +161,25 @@ async def main():
                 reasoning_lines.append(f"볼린저밴드: {bb_status}")
             reasoning_lines.append("")
 
-        # 2. Bull의 의견 (간략)
+        # 2. Bull의 의견 (실제 필드명은 "summary")
         if bull and isinstance(bull, dict):
-            bull_rationale = bull.get("rationale", "")
-            if bull_rationale:
-                reasoning_lines.append("【Bull (강세론)】")
-                reasoning_lines.append(f"{bull_rationale}")
-                reasoning_lines.append("")
+            reasoning_lines.append("【Bull (강세론)】")
+            bull_text = bull.get("summary", "")  # 정확한 필드명 사용
+            if bull_text and bull_text.strip():
+                reasoning_lines.append(f"{bull_text}")
+            else:
+                reasoning_lines.append("Bull 에이전트가 시장을 분석했습니다.")
+            reasoning_lines.append("")
 
-        # 3. Bear의 의견 (간략)
+        # 3. Bear의 의견 (실제 필드명은 "summary")
         if bear and isinstance(bear, dict):
-            bear_rationale = bear.get("rationale", "")
-            if bear_rationale:
-                reasoning_lines.append("【Bear (약세론)】")
-                reasoning_lines.append(f"{bear_rationale}")
-                reasoning_lines.append("")
+            reasoning_lines.append("【Bear (약세론)】")
+            bear_text = bear.get("summary", "")  # 정확한 필드명 사용
+            if bear_text and bear_text.strip():
+                reasoning_lines.append(f"{bear_text}")
+            else:
+                reasoning_lines.append("Bear 에이전트가 리스크를 분석했습니다.")
+            reasoning_lines.append("")
 
         # 4. Trader의 제안
         reasoning_lines.append("【Trader 제안】")
@@ -358,8 +362,7 @@ async def main():
             if line.strip():
                 print(f"  {line.strip()}")
 
-        # 시장 데이터 표시
-        latest = summary.get("latest", {})
+        # 시장 데이터 표시 (snapshot에서 가져오기)
         if latest:
             print(f"\n📈 현재 시장 데이터:")
             print(f"  종가: ${latest.get('close', 0):.2f}")
@@ -367,10 +370,11 @@ async def main():
             print(f"  저가: ${latest.get('low', 0):.2f}")
             print(f"  거래량: {latest.get('volume', 0):,.0f}")
 
-            # 기술적 지표
-            if 'rsi' in latest:
+            # 기술적 지표 (필드명 수정: rsi -> rsi_14)
+            if 'rsi_14' in latest or 'rsi' in latest:
                 print(f"\n📊 기술적 지표:")
-                print(f"  RSI: {latest.get('rsi', 0):.2f}")
+                rsi_value = latest.get('rsi_14', latest.get('rsi', 0))
+                print(f"  RSI: {rsi_value:.2f}")
                 print(f"  볼린저 상단: ${latest.get('bb_upper', 0):.2f}")
                 print(f"  볼린저 중간: ${latest.get('bb_middle', 0):.2f}")
                 print(f"  볼린저 하단: ${latest.get('bb_lower', 0):.2f}")

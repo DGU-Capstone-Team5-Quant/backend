@@ -454,7 +454,6 @@ class BacktestUI:
 
                 # 차트 타입 선택
                 choices = [
-                    "📈 통합 대시보드 (전체 차트)",
                     "💰 자본 변화 그래프",
                     "📊 주가 및 매매 시점",
                     "← 뒤로가기"
@@ -472,10 +471,7 @@ class BacktestUI:
                 console.print(f"\n[cyan]차트 생성 중...[/cyan]")
 
                 # 선택한 차트 생성
-                if "통합 대시보드" in choice:
-                    save_path = output_dir / f"{base_name}_dashboard.png"
-                    visualizer.plot_combined_dashboard(result, save_path)
-                elif "자본 변화" in choice:
+                if "자본 변화" in choice:
                     save_path = output_dir / f"{base_name}_equity.png"
                     visualizer.plot_equity_curve(result, save_path)
                 elif "주가 및 매매" in choice:
