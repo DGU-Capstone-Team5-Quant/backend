@@ -83,5 +83,5 @@ backend/
 ## ⚠️ 필수 요구사항
 
 - Python 3.12+
-- Ollama
+- Ollama(LLM)
 - Redis (메모리 저장소)
